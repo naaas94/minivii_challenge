@@ -13,7 +13,7 @@ git clone <repo>
 cd minivii_challenge
 # Place data.csv in the repo root (not committed — volume-mounted)
 docker compose up
-# Open http://localhost:3000
+# Open http://localhost:3001
 ```
 
 **⚠️ First-run note: ~29 GB download** (`qwen2.5-coder:14b` ~9 GB + `qwen3:32b` ~20 GB). Subsequent runs use the cached `ollama_cache` volume — no re-download.
@@ -33,7 +33,7 @@ docker compose up
 |---|---|
 | `db` | 8001 |
 | `nlp` | 8002 |
-| `ui` | 3000 |
+| `ui` | 3001 (maps to container :3000) |
 | `ollama` | 11434 (internal) |
 
 ---

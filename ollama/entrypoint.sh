@@ -8,10 +8,10 @@ done
 echo "Ollama API ready."
 
 echo "Pulling SQL model..."
-ollama pull qwen2.5-coder:14b
+ollama pull "${SQL_MODEL:-qwen2.5-coder:14b}" || exit 1
 
 echo "Pulling synthesis model..."
-ollama pull qwen3:32b
+ollama pull "${SYNTHESIS_MODEL:-qwen3:32b}" || exit 1
 
 touch /tmp/models_ready
 echo "Models ready. Ollama serving."

@@ -12,7 +12,7 @@ services:
       retries: 5
 
   ollama:
-    image: ollama/ollama
+    build: ./ollama
     volumes: ["ollama_cache:/root/.ollama"]
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     configs:
@@ -47,7 +47,7 @@ services:
 
   ui:
     build: ./ui
-    ports: ["3000:3000"]
+    ports: ["3001:3000"]
     networks: [nivii-net]
     depends_on:
       nlp:
