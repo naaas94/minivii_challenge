@@ -26,7 +26,7 @@ dev:
     query: what's the bussiest day of the week
     wall-clock time:
         - sql generation:
-        - model: 
+        - model swap: 
         - synthesis: 
         - total: 
     query class: time_filter 
@@ -42,7 +42,7 @@ dev:
     query: Most bought product on Fridays
     wall-clock time:
         - sql generation:
-        - model:
+        - model swap:
         - synthesis:
         - total:
     query class: time_filter / and not aggregation which checks out with eval set - dunno what's happening here.
@@ -67,7 +67,7 @@ dev:
     query: Recent sales
     wall-clock time:
         - sql generation:
-        - model:
+        - model swap:
         - synthesis:
         - total:
     query class: time_filter
@@ -81,3 +81,53 @@ dev:
           LIMIT 10;]
     warning: Query could not be executed. max steps reached without successful result.
     thinking: pretty good actually. Checks out with eval set.
+
+---
+
+6th run e2e:
+    query: what if we like stocked up on Alfajor Sin Azucar Suelto and ran a promotion for 12 unit bundles?
+    wall-clock time:
+        - sql generation:
+        - model swap:
+        - synthesis:
+        - total:
+    query class: 
+    steps taken: 
+    interpretations: 
+    product_name: 
+    quantity: 
+    synthesis:
+    sql: [
+
+        ]
+    thinking: trying to break it or confuse it. It timed out. 
+    warning: Service unavailable:
+        {
+        POST /api/generate took 8m51s
+        Model swap / runner start ~96s
+        0/65 layers offloaded to GPU
+        }
+
+---
+
+6th run e2e:
+    query: what is the name of the product with the smallest prime number as the total sold quantities from the last 30 days
+    wall-clock time:
+        - sql generation:
+        - model swap:
+        - synthesis:
+        - total:
+    query class: aggregation 
+    steps taken: 4
+    interpretations:  
+    synthesis:
+    sql: [
+
+        ]
+    thinking: trying to break it or confuse it.  
+    warning: Query could not be executed. max steps reached without successful result
+    agent ran a test: { rows with now-30d filter: 0
+        products in dataset last-30d window: 54
+        products with prime totals: 11
+        smallest prime answer: ('Tableta 70 cacao x80g', 2)
+        "The model generated SQL for “smallest total quantity sold” using now - 30 days, but ignored the prime-number constraint and used a date window with no rows (dataset is 2024, not today). ReAct burned all 4 refinement steps on the same empty result and returned “max steps reached”—a logic/SQL failure that completed in ~4.5 minutes, not a timeout or service outage."}
