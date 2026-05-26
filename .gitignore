@@ -1,5 +1,5 @@
 __pycache__/
 *.pyc
-logs/runs/
+logs/
 data.csv
 .env
