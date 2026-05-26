@@ -1,0 +1,40 @@
+dev: 
+- for orch used: sonnet 4.6
+- for exec and build: composer 2.5
+- for audit used: composer 2.5
+
+### 5/26 19:30 ish
+
+---
+1st successful run e2e: 
+    query: what's the most sold product 
+    runtime: 
+        - sql generation: 1'42''
+        - model swap: 73''
+        - synthesis: 4'43''
+        - total: 6'58''
+    query class: aggregation
+    steps taken: 1
+    interpretations: most bought / most popular / sum(quantity) DESC
+    prod_name: Alfajor Sin Azucar Suelto
+    quantity: 4566
+    synthesis: forgot to copy it but something like "analysis assumes most sold = total quantity sold prioritize inventory management for customer favorite bla bla"
+
+---
+
+2nd successful run e2e: 
+    query: what's the bussiest day of the week
+    runtime:
+        - sql generation: 1'42''
+        - model: swap 73''
+        - synthesis: 4'43''
+        - total: 6'58''
+    query class: time_filter 
+    steps taken: 1
+    interpretations: COUNT(DISTINCT ticket_number) AS transactions
+    transactions: 1985
+    synthesis: Based on the data, **Friday** had the highest number of transactions at **1,985**, making it the busiest day of the week. This suggests that staffing or promotional efforts could be optimized on Fridays to better serve customer demand. This conclusion assumes the data reflects a typical week and does not account for seasonal or event-driven variations.
+    sql: [SELECT week_day, COUNT(DISTINCT ticket_number) AS transactions FROM sales GROUP BY week_day ORDER BY transactions DESC LIMIT 1;]
+
+---
+

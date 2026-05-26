@@ -13,6 +13,7 @@ NLP_URL = os.environ.get("NLP_URL", "http://nlp:8002")
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse(
+        request,
         "index.html",
         {"request": request, "result": None, "error": None, "question": ""},
     )
@@ -33,6 +34,7 @@ async def query(request: Request, question: str = Form(...)):
     except Exception as exc:
         error = f"Service unavailable: {exc}"
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
             "request": request,
