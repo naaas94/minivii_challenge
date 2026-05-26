@@ -8,7 +8,7 @@ dev:
 ---
 1st successful run e2e: 
     query: what's the most sold product 
-    runtime: 
+    wall-clock time: 
         - sql generation: 1'42''
         - model swap: 73''
         - synthesis: 4'43''
@@ -24,11 +24,11 @@ dev:
 
 2nd successful run e2e: 
     query: what's the bussiest day of the week
-    runtime:
-        - sql generation: 1'42''
-        - model: swap 73''
-        - synthesis: 4'43''
-        - total: 6'58''
+    wall-clock time:
+        - sql generation:
+        - model: 
+        - synthesis: 
+        - total: 
     query class: time_filter 
     steps taken: 1
     interpretations: COUNT(DISTINCT ticket_number) AS transactions
@@ -38,3 +38,46 @@ dev:
 
 ---
 
+3rd successful run e2e:
+    query: Most bought product on Fridays
+    wall-clock time:
+        - sql generation:
+        - model:
+        - synthesis:
+        - total:
+    query class: time_filter / and not aggregation which checks out with eval set - dunno what's happening here.
+    steps taken: 1
+    interpretations: most bought / most popular product: default to SUM(quantity) DESC
+    product_name: Alfajor Sin Azucar Suelto
+    quantity: 850
+    synthesis: On Fridays, the most popular product is **Alfajor Sin Azucar Suelto**, with a total of **850 units sold**. This suggests that promoting or restocking this item could capitalize on consistent customer demand on weekends. The analysis assumes sales data reflects historical Friday transactions and uses total quantity sold as the primary metric for popularity.
+    sql: [
+        SELECT product_name, 
+        SUM(quantity) AS total_quantity_sold
+        FROM sales
+        WHERE week_day = 'Friday'
+        GROUP BY product_name
+        ORDER BY total_quantity_sold DESC
+        LIMIT 1;]
+    thinking: tf going on. 
+
+---
+
+5th run e2e:
+    query: Recent sales
+    wall-clock time:
+        - sql generation:
+        - model:
+        - synthesis:
+        - total:
+    query class: time_filter
+    steps taken: 4 (max)
+    interpretations: recent without explicit time window: default to last 30 days using date column
+    synthesis: Based on the data, **Friday** had the highest number of transactions at **1,985**, making it the busiest day of the week. This suggests that staffing or promotional efforts could be optimized on Fridays to better serve customer demand. This conclusion assumes the data reflects a typical week and does not account for seasonal or event-driven variations.
+    sql: [SELECT *
+          FROM sales
+          WHERE date >= strftime('%Y-%m-%d', 'now', '-30 days')
+          ORDER BY date DESC
+          LIMIT 10;]
+    warning: Query could not be executed. max steps reached without successful result.
+    thinking: pretty good actually. Checks out with eval set.
