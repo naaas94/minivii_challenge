@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Nivii — BI Agent</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --text: #1a1d21;
+      --muted: #5c6570;
+      --accent: #2563eb;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --error-text: #991b1b;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem 1rem;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.75rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0 0 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    #queryForm {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    #queryForm input[type="text"] {
+      flex: 1 1 280px;
+      min-width: 0;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    #queryForm button {
+      padding: 0.65rem 1.25rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #queryForm button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #spinner {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 0;
+      color: var(--muted);
+    }
+
+    #spinner.visible {
+      display: flex;
+    }
+
+    .spinner-ring {
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .narrative {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .interpretations {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+    }
+
+    .interpretations ul {
+      margin: 0.5rem 0 0;
+      padding-left: 1.25rem;
+    }
+
+    details {
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      background: #fafbfc;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    pre {
+      margin: 0.75rem 0 0;
+      padding: 0.75rem;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    .empty-result {
+      color: var(--muted);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mini Nivii</h1>
+    <p class="subtitle">Ask a business question in natural language.</p>
+
+    <div class="card">
+      <form id="queryForm" method="post" action="/">
+        <input
+          type="text"
+          name="question"
+          id="questionInput"
+          placeholder="Ask a business question..."
+          value="{{ question or '' }}"
+          required
+        >
+        <button type="submit" id="submitBtn">Ask</button>
+      </form>
+    </div>
+
+    <div id="spinner" aria-live="polite">
+      <div class="spinner-ring" role="status" aria-label="Loading"></div>
+      <span>Analyzing… (this may take 3–7 minutes on GPU)</span>
+    </div>
+
+    <div id="results-panel">
+      {% if error %}
+        <div class="error" role="alert">{{ error }}</div>
+      {% endif %}
+
+      {% if result %}
+        {% if result.narrative %}
+          <div class="card narrative">
+            <strong>{{ result.narrative }}</strong>
+          </div>
+        {% endif %}
+
+        <p class="meta">
+          Query class: <strong>{{ result.query_class }}</strong>
+          · Steps taken: <strong>{{ result.execution.steps_taken }}</strong>
+        </p>
+
+        {% if result.interpretations %}
+          <div class="interpretations">
+            <strong>Interpretations applied:</strong>
+            <ul>
+              {% for i in result.interpretations %}
+              <li>{{ i }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <details>
+          <summary>SQL</summary>
+          <pre><code>{{ result.sql | safe }}</code></pre>
+        </details>
+
+        {% if result.execution.data %}
+          <div class="card">
+            <table>
+              <thead>
+                <tr>
+                  {% for col in result.execution.columns %}
+                  <th>{{ col }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in result.execution.data %}
+                <tr>
+                  {% for col in result.execution.columns %}
+                  <td>{{ row[col] }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% elif result.execution.success %}
+          <p class="empty-result">Query executed successfully but returned no rows.</p>
+        {% else %}
+          <p class="error" role="alert">
+            Query could not be executed.
+            {% if result.execution.failure_reason %}
+              {{ result.execution.failure_reason }}
+            {% endif %}
+          </p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById("queryForm");
+      const spinner = document.getElementById("spinner");
+      const submitBtn = document.getElementById("submitBtn");
+      const resultsPanel = document.getElementById("results-panel");
+
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        spinner.classList.add("visible");
+        submitBtn.disabled = true;
+        resultsPanel.innerHTML = "";
+
+        try {
+          const response = await fetch("/", {
+            method: "POST",
+            body: new FormData(form),
+          });
+          const html = await response.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const panel = doc.getElementById("results-panel");
+          if (panel) {
+            resultsPanel.innerHTML = panel.innerHTML;
+          } else {
+            resultsPanel.innerHTML =
+              '<div class="error" role="alert">Unexpected response from server.</div>';
+          }
+        } catch (err) {
+          resultsPanel.innerHTML =
+            '<div class="error" role="alert">Could not reach the server. Please try again.</div>';
+        } finally {
+          spinner.classList.remove("visible");
+          submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
