@@ -1,3 +1,14 @@
+import os
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def _ollama_client():
+    import ollama
+
+    return ollama.Client(host=os.environ["OLLAMA_URL"])
+
+
 class LLMClient:
     def __init__(self, backend: str = "ollama", model: str = "qwen2.5-coder:14b"):
         if backend not in {"ollama", "groq", "together"}:
@@ -12,10 +23,8 @@ class LLMClient:
         return self._litellm_generate(prompt, target_model, **kwargs)
 
     def _ollama_generate(self, prompt: str, model: str, **kwargs) -> str:
-        import ollama
-
         options = {k: v for k, v in kwargs.items() if k != "model"}
-        response = ollama.generate(model=model, prompt=prompt, options=options)
+        response = _ollama_client().generate(model=model, prompt=prompt, options=options)
         return response["response"]
 
     def _litellm_generate(self, prompt: str, model: str, **kwargs) -> str:

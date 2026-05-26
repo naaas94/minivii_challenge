@@ -1,8 +1,8 @@
 # Orchestrator Plan — Mini Nivii Build
 
 **Plan name:** `minivii-build`  
-**Version:** 1.0  
-**Status:** Active  
+**Version:** 1.2  
+**Status:** Active — v1.2 amendment cycle (post-audit remediation)  
 **Spec source:** `mini-nivii-final-spec.md` (FINAL, corrected from v7)  
 **Created:** 2026-05-26
 
@@ -76,6 +76,7 @@ All dataclasses and enums below must be implemented exactly as specified. Owning
 | Docker volume | `ollama_cache` | Persists model weights |
 | Ports | db:8001, nlp:8002, ui:3000, ollama:11434 | Frozen; do not change |
 | Env vars (nlp) | `DB_URL`, `OLLAMA_URL`, `SQL_MODEL`, `SYNTHESIS_MODEL` | Set in docker-compose; nlp reads via `os.environ` |
+| | | **Landed (TA1):** `OLLAMA_URL` is consumed on the inference path via `ollama.Client(host=os.environ["OLLAMA_URL"])` in `LLMClient._ollama_generate`. Health display in `nlp/main.py` unchanged. Missing `OLLAMA_URL` raises `KeyError` on first Ollama generate call — no silent localhost fallback. See `.dev/decision-logs/TA1-ollama-host-wiring.md`. |
 | Models | SQL: `qwen2.5-coder:14b` · Synthesis: `qwen3:32b` | Fallback: `qwen2.5-coder:7b` / `qwen3:8b` for CPU-only |
 | nlp package layout | `nlp/pipeline/` for pipeline components, `nlp/eval/` for harness, `nlp/schema/` for YAML | |
 | Decision log paths | T3: `.dev/decision-logs/T3-nlp-pipeline-core.md` · T4: `.dev/decision-logs/T4-react-loop-pipeline.md` | Architectural subtask requirement |
@@ -320,6 +321,90 @@ Packets are saved to `.dev/plans/minivii-build/packets/T{n}.md`. Each packet is 
 - [T6 packet](.dev/plans/minivii-build/packets/T6.md)
 - [T7 packet](.dev/plans/minivii-build/packets/T7.md)
 
+**Amendment packets (v1.2 — post-audit):**
+- [TA1 packet](.dev/plans/minivii-build/packets/TA1.md) — Infra integration fixes (F1, F2)
+- [TA2 packet](.dev/plans/minivii-build/packets/TA2.md) — Eval contract + db idempotency (F3, F4, F5, F6, F8)
+- [TA3 packet](.dev/plans/minivii-build/packets/TA3.md) — Artifact & narrative cleanup (F7, F9, F10, F11, F12, F13, F14)
+
+---
+
+## §7. Amendment Subtasks (v1.2 — Post-Audit Remediation)
+
+**Audit source:** `.dev/audits/2026-05-26-minivii-build.md`  
+**Verdict:** `fail` — three critical, five major findings must be resolved before submission.  
+**Amendment scope:** close all critical and major findings (F1–F9) from the audit; resolve minors in same cycle. No new architectural forks.
+
+### Amendment DAG
+
+```
+TA1 (infra integration fixes) ─┐
+                                ├──→ TA3 (artifact & narrative)
+TA2 (eval + db idempotency)  ─┘
+```
+
+**Parallel group:** `{TA1, TA2}` — independent file sets; may execute simultaneously.  
+**Sequential:** TA3 requires TA1 (Ollama host fixed, stack bootable) and TA2 (eval assertions landed, db idempotent) to produce a valid archived eval run for F9.
+
+**DAG edges from consumers into amendment nodes:**
+- `nlp/pipeline/llm_client.py` → TA1 (F1 fix)
+- `docker-compose.yml` / `db/Dockerfile` → TA1 (F2 fix)
+- `db/ingest.py` → TA2 (F4 fix)
+- `nlp/eval/harness.py` → TA2 (F5, F6, F8 fix)
+- `README.md` (eval command) + `nlp/tests/test_readme_contract.py` → TA2 (F3 fix)
+- `.dev/decision-logs/T4-react-loop-pipeline.md` → TA3 (F13 supersession)
+- `nlp/pipeline/pipeline.py` (JSONL fields) → TA3 (F10 fix)
+- `nlp/tests/test_ambiguity_detector.py` → TA3 (F11 fix)
+- `README.md` (dataset table + eval results) → TA3 (F12, F9 fix)
+- `.dev/execution-logs/T2-db-service.md` → TA3 (F7 create)
+
+---
+
+### TA1 — Infra Integration Fixes
+
+| Field | Value |
+|---|---|
+| **ID** | TA1 |
+| **Scope** | Fix two stack-breaking integration failures: (1) wire `OLLAMA_URL` compose env var to the Ollama Python SDK so LLM calls reach the `ollama` container instead of localhost; (2) fix db healthcheck so the db container reaches `service_healthy` without requiring `curl`. |
+| **Files to touch** | `nlp/pipeline/llm_client.py` (F1); `db/Dockerfile` and/or `docker-compose.yml` healthcheck (F2) |
+| **Contract bindings** | §2 Naming (`OLLAMA_URL` env var — consumption path now required, not just presence); §2 Error Envelope (db healthcheck must pass so nlp starts) |
+| **Inputs** | None — standalone infra fix; no prior amendment subtask required |
+| **Outputs** | (1) `LLMClient._ollama_generate` passes explicit host derived from `OLLAMA_URL` to `ollama.Client(host=…)` or sets `OLLAMA_HOST` env before SDK init; (2) db healthcheck probe does not require `curl` — either `wget -q -O- http://localhost:8001/health` (if `wget` added to Dockerfile) or a Python-based probe (`python -c "import urllib.request; …"`) in docker-compose healthcheck; (3) §2 Naming row `OLLAMA_URL` back-annotated with `Landed:` bullet describing the consumption path; (4) TA1 feeds into TA3's supersession of T4 decision log (F13 — T4 log stated OLLAMA_URL assumption as acceptable; must receive supersession banner) |
+| **Kill criteria** | HALT if `LLMClient._ollama_generate` still calls module-level `ollama.generate()` without an explicit `host` parameter derived from env; HALT if db healthcheck still uses `curl` and `curl` is not installed in `db/Dockerfile`; HALT if `OLLAMA_HOST` env approach is used but the var is not set in docker-compose before nlp starts; HALT if `OLLAMA_URL` is consumed in health display only and not on the inference path |
+| **Log tier** | architectural — `OLLAMA_URL` typed env surface changes from declared-but-unused to consumed-on-inference-path; decision log at `.dev/decision-logs/TA1-ollama-host-wiring.md` |
+| **Risks & mitigations** | Two acceptable fixes for F1: (a) `ollama.Client(host=os.environ["OLLAMA_URL"])` — cleanest; (b) `os.environ["OLLAMA_HOST"] = os.environ["OLLAMA_URL"]` set at module load — acceptable if (a) not possible. Either approach must be chosen and documented in the TA1 decision log. Do not silently fall back to localhost if `OLLAMA_URL` is unset — raise `KeyError` loudly. For F2, prefer `wget` in Dockerfile over Python probe if python startup latency is a concern; both are acceptable. |
+
+---
+
+### TA2 — Eval Contract + db Idempotency
+
+| Field | Value |
+|---|---|
+| **ID** | TA2 |
+| **Scope** | Five concurrent fixes: (1) make db ingest idempotent; (2) align eval entrypoint docs with container module layout; (3) add `query_class` assertion to `run_eval`; (4) add ambiguity end-to-end assertions for cases 10 and 11; (5) reconcile cases 2 and 8 `expected_class` with classifier keyword heuristic behavior. |
+| **Files to touch** | `db/ingest.py`, `nlp/eval/harness.py`, `README.md` (eval command section), `nlp/tests/test_readme_contract.py` |
+| **Contract bindings** | §2 Types (`ResolvedQuestion` — case 10 ambiguity gate; `QueryClass` — per-case assertion); §2 Tests (eval entrypoint literal, eval as final-pass gate) |
+| **Inputs** | None — parallel with TA1; no shared files |
+| **Outputs** | (1) `load_csv_to_db` truncates (`DELETE FROM sales` or `DROP TABLE IF EXISTS` + recreate) before inserting rows so double-start yields `row_count == 24212`; (2) `run_eval` per-case result includes `class_pass: pipeline_result.query_class == case.expected_class`; overall case passes only if both `sql_pass` and `class_pass` are True; (3) cases 2 and 8 `expected_class` corrected to `QueryClass.AGGREGATION` (matching classifier keyword `"how many"` in `KEYWORD_CLASS_MAP`), OR question text changed to not trigger keyword heuristic — chosen approach documented; (4) cases 10 and 11 add assertion that `resolved_question` or `interpretations` is non-empty (ambiguity fired); (5) README eval section updated to `docker compose exec nlp python -m eval.harness`; `nlp/tests/test_readme_contract.py` README-command assertion updated to match; (6) §2 Tests `Landed:` bullet noting container eval command is `python -m eval.harness` |
+| **Kill criteria** | HALT if `load_csv_to_db` still does unconditional INSERT without prior truncation/drop; HALT if `run_eval` still has no per-case comparison of `pipeline_result.query_class` to `case.expected_class`; HALT if cases 2 and 8 would still fail `class_pass` check after fix; HALT if README and README contract test still reference `python -m nlp.eval.harness`; HALT if cases 10/11 add no assertion touching `resolved_question`, `interpretations`, or disambiguation clause |
+| **Log tier** | standard |
+| **Risks & mitigations** | For cases 2/8 reconciliation: changing `expected_class` to `AGGREGATION` is the low-risk path (matches classifier). Changing the question text carries risk of altering the semantic coverage the case was designed to test. Document the chosen approach. For db idempotency: `DELETE FROM sales` (keep schema) is safer than `DROP TABLE` (re-runs DDL, may affect schema migrations if any). Prefer `DELETE FROM sales` followed by the existing INSERT loop unless schema changes are needed. |
+
+---
+
+### TA3 — Artifact & Narrative Cleanup
+
+| Field | Value |
+|---|---|
+| **ID** | TA3 |
+| **Scope** | Close all remaining minor/artifact findings after TA1 and TA2 are complete: create missing T2 execution log, run and archive a `--skip-judge` eval report, remove extra JSONL fields, rename drifted test functions, fix README dataset table to include `ticket_prefix`, supersede T4 decision log stale prose on OLLAMA_URL. |
+| **Files to touch** | `.dev/execution-logs/T2-db-service.md` (create), `nlp/pipeline/pipeline.py` (JSONL fields), `nlp/tests/test_ambiguity_detector.py` (rename), `README.md` (dataset table + eval results section), `.dev/decision-logs/T4-react-loop-pipeline.md` (supersession banner) |
+| **Contract bindings** | §2 Logging (JSONL required fields — no extra keys); §2 Tests (unit test naming `test_resolve_ambiguity`); §2 Naming (decision log paths for T4 architectural log) |
+| **Inputs** | TA1 (Ollama host wired — LLM inference reaches `ollama` container); TA2 (db idempotent, eval assertions landed, container eval command correct) |
+| **Outputs** | (1) `.dev/execution-logs/T2-db-service.md` created with smoke-test evidence (`row_count: 24212`, endpoint responses); (2) `Pipeline._log_stage` emits only the 11 fields from §2 Logging schema — extra keys `class`, `method`, `success`, `steps_taken` removed; (3) ambiguity detector unit test function renamed from `test_resolve_*` pattern to include canonical `test_resolve_ambiguity` (or additional function with that name); (4) README dataset table updated to list 10 columns including `ticket_prefix`; (5) at least one `--skip-judge` eval run executed, results (pass/fail per case, overall structural pass rate) documented in README Evaluation section; (6) T4 decision log receives supersession banner at top citing TA1 as the authority on OLLAMA_URL host wiring; §2 Naming `OLLAMA_URL` row and T4 log both annotated with `Landed:` bullets |
+| **Kill criteria** | HALT if T4 decision log still describes `OLLAMA_URL` as acceptable assumption without supersession banner pointing to TA1 decision log; HALT if JSONL records still emit any field not in the §2 Logging 11-field schema; HALT if README dataset table column count still shows 9 (must show 10 with `ticket_prefix`); HALT if TA3 ships without at least one archived `skip_judge=True` eval result documented in README; HALT if `.dev/execution-logs/T2-db-service.md` is still absent |
+| **Log tier** | standard |
+| **Risks & mitigations** | The eval run (F9) requires TA1 + TA2 to be complete and a running Docker Compose stack with GPU or CPU-only fallback. If the full GPU stack is unavailable, a `skip_judge=True` run on a locally-mocked db (localhost) is acceptable for structural pass-rate evidence — document the environment explicitly. The JSONL field removal (F10) must not break any downstream consumer that reads those extra fields; verify no test asserts their presence before removing. |
+
 ---
 
 ## Validation Checklist
@@ -339,6 +424,27 @@ Packets are saved to `.dev/plans/minivii-build/packets/T{n}.md`. Each packet is 
 - [x] §5.2 and §5.4 entries conform to required tuple shape with explicit Tn IDs
 - [x] §5 answered using packet-only executor persona lens
 - [x] Context map: greenfield — not required
+
+### v1.2 Amendment Record (post-audit)
+
+**Audit:** `.dev/audits/2026-05-26-minivii-build.md` · **Verdict:** `fail`
+
+| # | Sev | Finding | Amendment | Packets |
+|---|---|---|---|---|
+| B1 | **critical** | F1: `OLLAMA_URL` set in compose but Ollama SDK reads `OLLAMA_HOST` → LLM calls hit localhost | TA1: `LLMClient` wired to explicit host from `OLLAMA_URL`; §2 Naming `Landed:` bullet; TA1 decision log at `.dev/decision-logs/TA1-ollama-host-wiring.md` | TA1.md |
+| B2 | **critical** | F2: db healthcheck uses `curl`; missing from `python:3.11-slim` image → db never healthy | TA1: db Dockerfile adds `wget` or docker-compose switches to Python probe | TA1.md |
+| B3 | major | F3: README + contract test reference `python -m nlp.eval.harness` which fails inside container (`nlp/` not in PYTHONPATH) | TA2: README and test corrected to `python -m eval.harness`; §2 Tests `Landed:` bullet | TA2.md |
+| B4 | major | F4: `load_csv_to_db` unconditional INSERT duplicates rows on restart | TA2: idempotent ingest via `DELETE FROM sales` before insert | TA2.md |
+| B5 | major | F5: `run_eval` records `query_class` but never asserts it against `expected_class` | TA2: per-case `class_pass` assertion added; overall pass requires both `sql_pass` and `class_pass` | TA2.md |
+| B6 | major | F6: cases 10/11 have no assertion on `resolved_question`/`interpretations` | TA2: ambiguity assertion added for cases 10/11 | TA2.md |
+| B7 | major | F7: CHANGELOG cites `.dev/execution-logs/T2-db-service.md` which does not exist | TA3: file created with smoke-test evidence | TA3.md |
+| B8 | major | F8: cases 2/8 `expected_class="simple"` but classifier returns `aggregation` for `"how many"` questions | TA2: `expected_class` corrected to `AGGREGATION` or question text adjusted | TA2.md |
+| B9 | major | F9: eval gate declared but no passing run documented; terminal shows 12/12 FAIL | TA3: `skip_judge=True` eval run archived; results documented in README | TA3.md |
+| B10 | minor | F10: JSONL records emit extra fields outside §2 Logging schema | TA3: extra fields removed from `Pipeline._log_stage` | TA3.md |
+| B11 | minor | F11: test naming drift (`test_resolve_*` vs required `test_resolve_ambiguity`) | TA3: canonical name added/restored | TA3.md |
+| B12 | minor | F12: README dataset table shows 9 columns, missing `ticket_prefix` | TA3: table updated to 10 columns | TA3.md |
+| B13 | minor | F13: T4 decision log describes OLLAMA_URL assumption as acceptable; breaks at runtime | TA3: supersession banner added to T4 log pointing to TA1 decision log | TA3.md |
+| B14 | minor | F14: T2 decision log informal format | Acknowledged; not reworked — T2 was standard tier; informal log still useful. No action. | — |
 
 ### v1.1 Amendment Record
 
