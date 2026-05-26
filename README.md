@@ -135,8 +135,18 @@ The evaluation harness is a **final-pass gate, not a CI regression suite**. A fu
 - **Two-layer validation:** structural SQL clause checks + LLM-as-judge on narrative quality
 - Per-case failure isolation; `--skip-judge` available for faster structural-only runs
 
+From the repo root on the host (with `nlp/` on `PYTHONPATH`):
+
 ```bash
-docker compose exec nlp python -m nlp.eval.harness
+python -m nlp.eval.harness --skip-judge
+```
+
+Inside the `nlp` container (`WORKDIR /app`; top-level package is `eval`, not `nlp.eval`):
+
+```bash
+docker compose exec nlp python -m eval.harness
+# or structural-only (Phase 2):
+docker compose exec nlp python -m eval.harness --skip-judge
 ```
 
 Results are written to `logs/eval_{timestamp}.json`.

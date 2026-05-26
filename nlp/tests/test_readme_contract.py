@@ -56,7 +56,8 @@ def test_architecture_decision_table_covers_all_ten():
 
 def test_eval_harness_run_command():
     text = README.read_text(encoding="utf-8")
-    assert "docker compose exec nlp python -m nlp.eval.harness" in text
+    assert "docker compose exec nlp python -m eval.harness" in text
+    assert "python -m nlp.eval.harness" in text
 
 
 def test_first_run_not_documented_as_nine_gb_total():

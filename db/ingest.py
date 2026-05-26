@@ -20,6 +20,11 @@ def load_csv_to_db(csv_path: str, db_path: str) -> None:
         )
     """)
 
+    # Idempotent reload: preserve schema, clear rows on every startup (TA2 F4).
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM sales")
+    conn.commit()
+
     with open(csv_path) as f:
         reader = csv.DictReader(f)
         rows = []
@@ -44,4 +49,13 @@ def load_csv_to_db(csv_path: str, db_path: str) -> None:
         rows
     )
     conn.commit()
+
+    expected_rows = len(rows)
+    (row_count,) = conn.execute("SELECT COUNT(*) FROM sales").fetchone()
+    if row_count != expected_rows:
+        conn.close()
+        raise ValueError(
+            f"Expected {expected_rows} rows after ingest, got {row_count}"
+        )
+
     conn.close()

@@ -47,9 +47,10 @@ TEST_CASES = [
         forbidden_clauses=["sum(total)"],
         known_answer="Alfajor Sin Azucar Suelto (850 units)",
     ),
+    # F8: "how many" → AGGREGATION, but "on saturday" matches TIME_FILTER first in KEYWORD_CLASS_MAP iteration.
     TestCase(
         question="How many transactions happened on Saturdays?",
-        expected_class="simple",
+        expected_class="time_filter",
         expected_clauses=["count(distinct ticket_number)", "saturday"],
         forbidden_clauses=[],
     ),
@@ -84,9 +85,10 @@ TEST_CASES = [
         expected_clauses=["product_name", "sum(total)", "limit 5"],
         forbidden_clauses=[],
     ),
+    # F8: keyword heuristic maps "how many" to AGGREGATION (no day-of-week keyword in question).
     TestCase(
         question="How many transactions were there in November?",
-        expected_class="simple",
+        expected_class="aggregation",
         expected_clauses=["count(distinct ticket_number)", "2024-11"],
         forbidden_clauses=[],
     ),
@@ -116,6 +118,21 @@ TEST_CASES = [
         forbidden_clauses=[],
     ),
 ]
+
+
+def check_class_match(pipeline_query_class: str, case: TestCase) -> bool:
+    if not case.expected_class:
+        return True
+    return pipeline_query_class == case.expected_class
+
+
+def check_ambiguity(case_num: int, pipeline_result) -> bool:
+    """Cases 10–11 (1-based): ResolvedQuestion / interpretations gate (TA2 F6)."""
+    if case_num == 10:
+        return bool(pipeline_result.interpretations)
+    if case_num == 11:
+        return pipeline_result.resolved_question != pipeline_result.question
+    return True
 
 
 def check_sql_structure(generated_sql: str, case: TestCase) -> dict:
@@ -201,9 +218,13 @@ Respond with JSON only:
         results = []
         total = len(test_cases)
         for i, case in enumerate(test_cases):
+            case_num = i + 1
             try:
                 pipeline_result = self.pipeline.run(case.question)
                 sql_score = self.check_sql_structure(pipeline_result.sql, case)
+                class_pass = check_class_match(pipeline_result.query_class, case)
+                ambiguity_pass = check_ambiguity(case_num, pipeline_result)
+                case_pass = sql_score["pass"] and class_pass and ambiguity_pass
                 judge_score = None
                 if not skip_judge and pipeline_result.narrative:
                     judge_score = self.judge_synthesis(
@@ -214,7 +235,11 @@ Respond with JSON only:
                 result_entry = {
                     "question": case.question,
                     "class": pipeline_result.query_class,
+                    "expected_class": case.expected_class,
                     "sql_pass": sql_score["pass"],
+                    "class_pass": class_pass,
+                    "ambiguity_pass": ambiguity_pass,
+                    "case_pass": case_pass,
                     "sql_detail": sql_score,
                     "judge": dataclasses.asdict(judge_score) if judge_score else None,
                     "latency_ms": pipeline_result.total_latency_ms,
@@ -226,13 +251,25 @@ Respond with JSON only:
                     "question": case.question,
                     "error": str(exc),
                     "sql_pass": False,
+                    "class_pass": False,
+                    "ambiguity_pass": False,
+                    "case_pass": False,
                 }
             results.append(result_entry)
             print(
                 f"[{i + 1}/{total}] "
-                f"{'PASS' if result_entry.get('sql_pass') else 'FAIL'}: "
+                f"{'PASS' if result_entry.get('case_pass') else 'FAIL'} "
+                f"(sql={result_entry.get('sql_pass')}, class={result_entry.get('class_pass')}, "
+                f"amb={result_entry.get('ambiguity_pass')}): "
                 f"{case.question[:60]}"
             )
+        sql_passes = sum(1 for r in results if r.get("sql_pass"))
+        class_passes = sum(1 for r in results if r.get("class_pass"))
+        case_passes = sum(1 for r in results if r.get("case_pass"))
+        print(
+            f"Summary: {case_passes}/{total} cases passed | "
+            f"SQL {sql_passes}/{total} | class {class_passes}/{total}"
+        )
         report = EvalReport(results=results)
         self._write_report(report)
         return report
