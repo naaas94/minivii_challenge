@@ -151,6 +151,31 @@ docker compose exec nlp python -m eval.harness --skip-judge
 
 Results are written to `logs/eval_{timestamp}.json`.
 
+### Evaluation Results (structural, skip_judge=True)
+
+Run date: 2026-05-26  
+Environment: Docker `nlp` container (Linux), host GPU Ollama via `host.docker.internal:11434`; models `qwen2.5-coder:14b` / `qwen3:30b`  
+Command: `docker compose run --no-deps nlp python -m eval.harness --skip-judge` (db on Compose network; `nlp` service not started — equivalent to `docker compose exec nlp python -m eval.harness --skip-judge` when stack is up)
+
+| Case | Question summary | SQL pass | Class pass | Notes |
+|------|-----------------|---------|-----------|-------|
+| 1 | Most bought product on Fridays | ✓ | ✗ | SQL correct; keyword classifier returned `time_filter` (Friday) vs expected `aggregation` |
+| 2 | Transactions on Saturdays | ✓ | ✓ | |
+| 3 | Busiest hours on weekdays | ✓ | ✓ | |
+| 4 | Total revenue October 2024 | ✓ | ✓ | |
+| 5 | Waiter most revenue | ✓ | ✓ | |
+| 6 | Week-over-week revenue trend | ✓ | ✓ | |
+| 7 | Top 5 products by revenue | ✓ | ✓ | |
+| 8 | Transactions in November | ✓ | ✓ | |
+| 9 | Average ticket value per waiter | ✓ | ✓ | |
+| 10 | Most popular product (ambiguity) | ✓ | ✓ | Ambiguity resolution applied |
+| 11 | Recent sales (ambiguity) | ✓ | ✓ | ReAct hit max steps; structural SQL still matched |
+| 12 | Products with most returns | ✗ | ✓ | Generated SQL omitted `total < 0` return filter |
+
+**Structural pass rate: 11/12 SQL, 11/12 class**
+
+Known failures: Case 1 — classifier keyword precedence (`Friday` → `time_filter`); Case 12 — missing negative-total filter in generated SQL.
+
 ---
 
 ## Scale-Out
@@ -193,7 +218,7 @@ What would change for a real Nivii deployment beyond this demo:
 | Property | Value |
 |---|---|
 | Rows | 24,212 |
-| Columns | 9 (`date`, `week_day`, `hour`, `ticket_number`, `waiter`, `product_name`, `quantity`, `unitary_price`, `total`) |
+| Columns | 10 (`date`, `week_day`, `hour`, `ticket_number`, `ticket_prefix`, `waiter`, `product_name`, `quantity`, `unitary_price`, `total`) |
 | Unique products | 68 |
 | Unique tickets | 11,771 |
 | Unique waiters | 9 |
@@ -201,5 +226,7 @@ What would change for a real Nivii deployment beyond this demo:
 | Revenue | Sep 34.3M ARS · Oct 110.6M ARS · Nov 70.3M ARS |
 
 `data.csv` is **not committed** to this repository. Place it at the repo root before running `docker compose up`; it is volume-mounted read-only into the `db` container.
+
+**Column note:** `ticket_prefix TEXT` is extracted from `ticket_number` at ingest (register/type code: FCA, FCB, NCA, NCB).
 
 **Date handling:** source dates are `M/D/YYYY` (not zero-padded). Dates are normalized to ISO at ingestion — all SQL uses `strftime()` on the normalized column, never fixed-position `substr()` on raw strings.

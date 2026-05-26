@@ -35,7 +35,7 @@ def test_resolve_multi_trigger_composition():
     assert len(result.interpretations_applied) == 2
 
 
-def test_resolve_does_not_cascade():
+def test_resolve_ambiguity():
     descriptor = _load_domain_descriptor()
     question = "top recent products"
     result = detect_and_resolve(question, descriptor)

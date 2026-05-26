@@ -91,6 +91,7 @@ class Pipeline:
 
         t_stage = time.time()
         query_class, cls_method = classify(resolved.resolved, self.llm_client)
+        # query_class and cls_method omitted from JSONL per §2 Logging (11-field schema only).
         self._log(
             run_id,
             "classifier",
@@ -98,7 +99,6 @@ class Pipeline:
             resolved_question=resolved.resolved,
             model=self.sql_model if cls_method == "llm" else None,
             latency_ms=int((time.time() - t_stage) * 1000),
-            extra={"class": query_class.value, "method": cls_method},
         )
 
         t_stage = time.time()
@@ -125,6 +125,7 @@ class Pipeline:
             resolved.resolved,
             linked_schema,
         )
+        # execution.success and steps_taken omitted from JSONL per §2 Logging (11-field schema only).
         self._log(
             run_id,
             "sql_executor_complete",
@@ -133,7 +134,6 @@ class Pipeline:
             model=self.sql_model,
             sql_attempted=execution.sql,
             latency_ms=int((time.time() - t_stage) * 1000),
-            extra={"success": execution.success, "steps_taken": execution.steps_taken},
         )
 
         narrative = None
@@ -188,7 +188,6 @@ class Pipeline:
         observation_action: str | None = None,
         observation_message: str | None = None,
         latency_ms: int = 0,
-        extra: dict | None = None,
     ) -> None:
         record = {
             "run_id": run_id,
@@ -202,8 +201,6 @@ class Pipeline:
             "observation_message": observation_message,
             "latency_ms": latency_ms,
         }
-        if extra:
-            record.update(extra)
         log_path = self.log_dir / f"{run_id}.jsonl"
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")

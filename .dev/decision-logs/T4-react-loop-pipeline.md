@@ -1,3 +1,5 @@
+> **⚠ SUPERSEDED (partial) — TA1:** The section below describing `OLLAMA_URL` as an acceptable assumption that routes to health display only has been resolved. See `.dev/decision-logs/TA1-ollama-host-wiring.md` for the authoritative description of how `OLLAMA_URL` is consumed on the inference path. All other sections of this log remain current.
+
 # T4 — ReAct Loop, Synthesis, Pipeline Orchestration + FastAPI
 
 **Plan:** minivii-build · **Subtask:** T4 · **Date:** 2026-05-26
