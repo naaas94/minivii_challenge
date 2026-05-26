@@ -1,0 +1,115 @@
+domain: point_of_sale
+tables:
+  sales:
+    description: >
+      Individual line items from POS transactions at an Argentine confectionery shop.
+      Each row is one product sold within a ticket (receipt).
+      Multiple rows share the same ticket_number.
+    columns:
+      date:
+        type: TEXT
+        description: >
+          Transaction date in ISO format YYYY-MM-DD (normalized from source M/D/YYYY at ingestion).
+          Use standard SQLite date functions: strftime('%Y-%m', date) for month grouping,
+          strftime('%W', date) for week number. Do NOT use substr() for date conversion —
+          the column is already ISO.
+      week_day:
+        type: TEXT
+        description: >
+          Pre-computed day of week. Values: Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday.
+          Use this column for all day-of-week filters — it is more reliable than extracting
+          weekday from the date column.
+      hour:
+        type: TEXT
+        description: >
+          Transaction time as HH:MM (e.g. '14:32').
+          Use CAST(substr(hour,1,2) AS INTEGER) to extract hour as integer.
+      ticket_number:
+        type: TEXT
+        description: >
+          Unique receipt identifier (e.g. 'FCB 0003-000024735').
+          Use COUNT(DISTINCT ticket_number) for transaction counts, not COUNT(*).
+      ticket_prefix:
+        type: TEXT
+        description: >
+          Transaction type/register code extracted from ticket_number.
+          Values: FCA | FCB | NCA | NCB. Present across all date ranges.
+          Use for queries about transaction types or register-level analysis.
+      waiter:
+        type: TEXT
+        description: >
+          Staff member ID stored as text. Values: 0, 51, 52, 101, 102, 103, 104, 105, 116.
+          Not a name — filter by numeric ID string.
+      product_name:
+        type: TEXT
+        description: >
+          Product sold. 68 unique Argentine confectionery items.
+          Note: 'ART. INEXISTENTE' is a placeholder for unregistered items.
+      quantity:
+        type: REAL
+        description: >
+          Units sold. Negative values indicate returns/refunds.
+          May be fractional (e.g. 0.5 for bulk items).
+      unitary_price:
+        type: INTEGER
+        description: Price per unit in Argentine pesos (ARS).
+      total:
+        type: INTEGER
+        description: >
+          Line item total = quantity * unitary_price.
+          Negative for returns/refunds (38 rows in dataset).
+    sample_values:
+      week_day:     [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+      product_name:
+        - "Alfajor Sin Azucar Suelto"
+        - "Alf. 150 aniv. Suelto"
+        - "Alfajor 70 cacao x un"
+        - "Alfajor mixto caja x12un"
+        - "Alfajor choc x un"
+        - "Conito choc x un"
+        - "Tableta 70 cacao x80g"
+        - "ART. INEXISTENTE"
+      waiter:       ["0", "51", "52", "101", "102", "103", "104", "105", "116"]
+      ticket_prefix: [FCA, FCB, NCA, NCB]
+    date_range:
+      start: "2024-09-21"
+      end:   "2024-11-20"
+      span_days: 60
+      note: >
+        Dataset covers approximately 2 months (Sep 21 – Nov 20, 2024).
+        Queries referencing annual or quarterly periods will have partial data.
+        Available full months: October 2024. Partial months: September, November 2024.
+
+relationships: []  # single table — no joins
+
+kpis:
+  - name: total_revenue
+    definition: "SUM(total)"
+    note: "Includes returns (negative totals). Add WHERE total > 0 to exclude returns."
+  - name: total_units_sold
+    definition: "SUM(quantity)"
+  - name: avg_ticket_value
+    definition: "SUM(total) * 1.0 / COUNT(DISTINCT ticket_number)"
+  - name: transaction_count
+    definition: "COUNT(DISTINCT ticket_number)"
+
+disambiguation_rules:
+  - when: "most bought / most popular product"
+    apply: "default to SUM(quantity) DESC"
+    note: "Quantity, not revenue, is the conventional 'most bought' metric."
+    state_in_output: true
+  - when: "top N without explicit metric"
+    apply: "default to SUM(total) DESC"
+    note: "Revenue is the default ranking metric when none specified."
+    state_in_output: true
+  - when: "recent without explicit time window"
+    apply: "default to last 30 days using date column"
+    note: "Dataset spans 60 days total; 30-day window is meaningful."
+    state_in_output: true
+  - when: "busiest / most active"
+    apply: "default to COUNT(DISTINCT ticket_number) DESC"
+    state_in_output: true
+  - when: "last month / this month"
+    apply: "use October 2024 as the reference full month (strftime('%Y-%m', date) = '2024-10')"
+    note: "October is the only complete month in the dataset."
+    state_in_output: true
