@@ -1,8 +1,8 @@
 # Orchestrator Plan — Mini Nivii Build
 
 **Plan name:** `minivii-build`  
-**Version:** 1.2  
-**Status:** Active — v1.2 amendment cycle (post-audit remediation)  
+**Version:** 1.3  
+**Status:** Complete — all amendment findings closed; §8 auditor handoff produced  
 **Spec source:** `mini-nivii-final-spec.md` (FINAL, corrected from v7)  
 **Created:** 2026-05-26
 
@@ -107,6 +107,8 @@ Every pipeline stage writes a structured JSONL record to `logs/runs/{run_id}.jso
 - **Naming:** test files `test_*.py`; eval entrypoint `python -m nlp.eval.harness`
 - **Coverage expectation:** the 12 eval cases are the primary correctness signal; unit tests for AmbiguityDetector composition logic and SQL extraction (`extract_sql`) are required
 - **Eval gate:** run with `skip_judge=False` only in Phase 3 (Ollama). Phase 2 uses `skip_judge=True`. This is not a CI regression suite.
+
+> **Landed (TA2):** Container eval command is `docker compose exec nlp python -m eval.harness` (`nlp/` is not in container PYTHONPATH; `WORKDIR /app` means top-level package is `eval`). Host-side command from repo root remains `python -m nlp.eval.harness` (where `nlp/` is a package on PYTHONPATH). README §Evaluation and `nlp/tests/test_readme_contract.py` updated to assert both. See CHANGELOG TA2 entry.
 
 ### CLI Surface
 
@@ -457,3 +459,116 @@ TA2 (eval + db idempotency)  ─┘
 | A5 | Structural | T4/T5: serialization ownership conflated — Jinja2 receives raw dataclass vs. plain dict was ambiguous | Clarified: T4 uses `asdict()` for HTTP wire only; T5 receives `response.json()` dict — no `asdict()` in T5 | T4.md, T5.md |
 | A6 | Minor | T2: startup sequencing unspecified — background task could race with first request | Kill criterion added: synchronous `@app.on_event("startup")`; `BackgroundTask` prohibited for ingestion | T2.md |
 | A7 | Minor | T3: window `FEW_SHOT_EXAMPLES` not guarded against transcribing the broken v7 `substr()` formula | Kill criterion (7) added: window example must use `strftime`, not `substr(` | T3.md |
+
+---
+
+## §8. Auditor Handoff
+
+**Plan version at handoff:** 1.3  
+**Handoff date:** 2026-05-26
+
+---
+
+### §8.1 Completion Snapshot
+
+**Tree SHA:** `6447a46`  
+**Working tree at verification:** clean (`git status` — nothing to commit)  
+**Verification command:** `cd nlp && python -m pytest tests/ -q`  
+**Result:** `46 passed, 2 warnings in 0.79s` (2 warnings are harmless `PytestCollectionWarning` for `TestCase` dataclass naming — not failures)  
+**Environment:** Python 3.x, Windows host, no external services required for unit tests  
+
+> **Note on SHA:** `6447a46` is the commit that added architecture docs, the audit file, and the three amendment packets (TA1/TA2/TA3). The code changes from TA1/TA2/TA3 land in earlier commits (`620c05e` TA1, `71f5b9b` TA2, `c1f0952` TA3). This plan.md §8 annotation is committed as a separate close-out commit on top of `6447a46`. All artifact paths in §8.2 resolve at HEAD = the close-out commit.
+
+---
+
+### §8.2 Artifact Chain
+
+All paths must `git show HEAD:<path>` succeed at the close-out commit (HEAD at time of §8 commit):
+
+| Artifact | Repo path |
+|---|---|
+| Spec (binding) | `mini-nivii-final-spec.md` |
+| This plan | `.dev/plans/minivii-build/plan.md` |
+| Original packets | `.dev/plans/minivii-build/packets/T1.md` – `T7.md` |
+| Amendment packets | `.dev/plans/minivii-build/packets/TA1.md`, `TA2.md`, `TA3.md` |
+| Architectural decision log T3 | `.dev/decision-logs/T3-nlp-pipeline-core.md` |
+| Architectural decision log T4 | `.dev/decision-logs/T4-react-loop-pipeline.md` _(superseded — banner at top)_ |
+| Architectural decision log TA1 | `.dev/decision-logs/TA1-ollama-host-wiring.md` |
+| T2 execution log | `.dev/execution-logs/T2-db-service.md` |
+| Audit report | `.dev/audits/2026-05-26-minivii-build.md` |
+| Changelog | `CHANGELOG.MD` |
+| README | `README.md` |
+
+---
+
+### §8.3 §2 Evidence (per-row landed signals)
+
+| §2 Row | Shipped artifact | Test / check |
+|---|---|---|
+| **Types — `ResolvedQuestion`** | `nlp/pipeline/ambiguity_detector.py:ResolvedQuestion` dataclass | `tests/test_ambiguity_detector.py::test_resolve_ambiguity` (+ 3 siblings); eval cases 10/11 `check_ambiguity()` |
+| **Types — `QueryClass(Enum)`** | `nlp/pipeline/query_classifier.py:QueryClass` | `tests/test_ambiguity_detector.py` (imports enum); eval `check_class_match()` asserts per-case |
+| **Types — `Action(Enum)` / `ObservationResult`** | `nlp/pipeline/sql_executor.py` | `tests/test_sql_executor.py` — `ObservationResult(action=Action.ACCEPT, ...)` path tested |
+| **Types — `ExecutionResult`** | `nlp/pipeline/sql_executor.py:ExecutionResult` | `tests/test_sql_executor.py`; eval reads `result.success`, `result.steps_taken` |
+| **Types — `PipelineResult`** | `nlp/pipeline/pipeline.py:PipelineResult` | Eval reads `.sql`, `.execution`, `.narrative`, `.query_class`, `.resolved_question`, `.interpretations` |
+| **Types — `TestCase`, `JudgeScore`, `EvalReport`** | `nlp/eval/harness.py` | `tests/test_harness.py`, `tests/test_eval_harness.py` |
+| **`quantity REAL`** | `db/ingest.py:DDL` (line: `quantity REAL`), `float(r['quantity'])` cast | `GET /schema` returns DDL with `REAL`; `.dev/execution-logs/T2-db-service.md` |
+| **db error envelope** | `db/main.py` — `POST /execute` returns `{"columns", "rows", "row_count"}` on success; `{"error", "sql"}` on failure | `.dev/execution-logs/T2-db-service.md` live smoke test |
+| **nlp error envelope** | `nlp/main.py` — `POST /query` returns HTTP 200 + `{"error": "..."}` for handled failures | `tests/test_result_synthesizer.py` synthesis guard; kill criterion verified by code inspection |
+| **Naming — ports / services** | `docker-compose.yml` — db:8001, nlp:8002, ui:3000, ollama:11434; network `nivii-net`; volume `ollama_cache` | `tests/test_readme_contract.py` checks README consistency |
+| **Naming — `OLLAMA_URL` (Landed TA1)** | `nlp/pipeline/llm_client.py:_ollama_client()` — `ollama.Client(host=os.environ["OLLAMA_URL"])` | `tests/test_llm_client.py` (TA1 new); eval run reached ollama host (terminal 247052) |
+| **Logging — 11-field JSONL schema** | `nlp/pipeline/pipeline.py:_log()` — signature + record dict has exactly 11 keys | Code inspection: extra fields removed with comments; no test asserts wrong fields |
+| **Tests — eval entrypoint (Landed TA2)** | README §Evaluation documents both host and container commands | `tests/test_readme_contract.py::test_eval_harness_run_command` asserts both strings |
+| **Tests — `test_resolve_ambiguity` exists** | `nlp/tests/test_ambiguity_detector.py::test_resolve_ambiguity` | `46 passed` run includes this test |
+| **CLI surface** | N/A — env vars only, no CLI flags | N/A |
+
+---
+
+### §8.4 §5 Disposition
+
+#### §5.2 Load-Bearing Assumptions
+
+| Assumption | Status | Evidence |
+|---|---|---|
+| `LLMClient.generate()` signature stable across all callers | **closed** | TA1 changed only `_ollama_generate` internals; public `.generate(prompt, model=None, **kwargs)` unchanged; 46 tests pass |
+| db `POST /execute` returns `{"columns", "rows", "row_count"}` on success | **closed** | `.dev/execution-logs/T2-db-service.md`; `_try_execute` unit tests in `test_sql_executor.py` |
+| `PipelineResult` field names stable at spec §5.9 shape | **closed** | T5 Jinja2 renders correctly; T6 eval reads all fields; 46 tests pass |
+| Docker service name `db` resolves in `nivii-net` | **closed** | `docker-compose.yml` unchanged; `DB_URL=http://db:8001` still correct; eval run in Compose network passed |
+| `data.csv` at `/app/data.csv` in db container at startup | **closed** | Volume mount unchanged; `GET /health` → `row_count: 24212` confirmed in execution log |
+
+#### §5.4 Hidden Couplings
+
+| Coupling | Status | Evidence |
+|---|---|---|
+| `QueryClass` enum values used as `FEW_SHOT_EXAMPLES` keys in T3 and as comparison target in T4 | **closed** | Enum values unchanged; eval case 6 (WINDOW) structural PASS in live run (terminal 247052) |
+| T4 `asdict()` serialization / T5 dict consumption | **closed** | `nlp/main.py` uses `dataclasses.asdict(result)`; `ui/main.py` reads `response.json()` dict; UI tested end-to-end |
+| T6 imports T4 transitively via `nlp.pipeline.pipeline` | **closed** | Import chain intact; `tests/test_eval_harness.py` imports harness which imports Pipeline; 46 tests pass |
+| Synthesis truncation `data[:10]` match between T4 `_build_synthesis_prompt` and T6 `judge_synthesis` | **closed** (treat-as-prediction) | Both still use `data[:10]` per code inspection; not independently tested — prediction was confirmed, not re-verified by test |
+
+---
+
+### §8.5 Cold-Read Seeds
+
+Files recommended for the auditor's narrative-blind Phase 0 read (surfaces where contract-vs-code drift is most likely):
+
+1. `nlp/pipeline/llm_client.py` — TA1 critical fix; verify `_ollama_client()` uses `OLLAMA_URL` and not a hardcoded host
+2. `db/ingest.py` — F4 idempotency fix; verify `DELETE FROM sales` precedes INSERT; check post-insert count guard
+3. `nlp/eval/harness.py` — F5/F6/F8 eval contract; verify `class_pass`, `ambiguity_pass`, `case_pass` logic; check cases 2/8/10/11 definitions
+4. `nlp/pipeline/pipeline.py` — F10 JSONL schema; verify `_log()` method has exactly 11 fields; no extra keys
+5. `docker-compose.yml` — F2 healthcheck; verify `wget` in db healthcheck command matches `db/Dockerfile` wget install
+6. `.dev/decision-logs/TA1-ollama-host-wiring.md` — TA1 rationale; audit decision quality and deferred-item tracking
+
+---
+
+### §8.6 Audit Remediation Cross-Link
+
+**Audit file:** `.dev/audits/2026-05-26-minivii-build.md`  
+**Amendment packets:** `.dev/plans/minivii-build/packets/TA1.md`, `TA2.md`, `TA3.md`
+
+**§2 Landed bullets that closed audit findings:**
+
+| Finding | Closed by | §2 Landed location |
+|---|---|---|
+| F1 (OLLAMA_URL not wired) | TA1 | §2 Naming — `OLLAMA_URL` row, `Landed (TA1):` bullet |
+| F3 (eval container command wrong) | TA2 | §2 Tests — `Landed (TA2):` bullet (added v1.3 close-out) |
+
+All other findings (F2, F4–F14) were code/artifact fixes with no §2 row describing the pre-fix state, so no additional `Landed:` bullets are required.
