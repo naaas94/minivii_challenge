@@ -292,8 +292,6 @@ What would change for a real Nivii deployment beyond this demo:
 | Date range | **60 days: Sep 21 – Nov 20, 2024** |
 | Revenue | Sep 34.3M ARS · Oct 110.6M ARS · Nov 70.3M ARS |
 
-`data.csv` is **not committed** to this repository. Place it at the repo root before running `docker compose up`; it is volume-mounted read-only into the `db` container.
-
 **Column note:** `ticket_prefix TEXT` is extracted from `ticket_number` at ingest (register/type code: FCA, FCB, NCA, NCB).
 
 **Date handling:** source dates are `M/D/YYYY` (not zero-padded). Dates are normalized to ISO at ingestion — all SQL uses `strftime()` on the normalized column, never fixed-position `substr()` on raw strings.
