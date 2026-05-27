@@ -162,6 +162,7 @@ Process artifacts (plans, audits, full architecture index) are maintained privat
 - **Fully local:** All inference via Ollama; no external API calls in the submitted system.
 - **Informal handoff (EN/ES):** [handoff_notes_in_raw_criollo.md](handoff_notes_in_raw_criollo.md)
 - **Portability (2nd machine):** [portability_check_on_my_laptop.md](portability_check_on_my_laptop.md) — clean clone on ~14 GB RAM Windows; `compose run -e` for CPU fallback when default models OOM
+- **Stress / breaking points:** [documented_breaking_points.md](documented_breaking_points.md) — curated UI failures (trust, ops, eval-adjacent)
 
 ---
 
@@ -268,6 +269,7 @@ What would change for a real Nivii deployment beyond this demo:
 
 ## Limitations
 
+- **Ad-hoc stress cases** — off-domain questions, adversarial logic, and ops edge cases from manual UI probing: [documented_breaking_points.md](documented_breaking_points.md) (not covered by the golden eval).
 - **Local model SQL reliability** — small models can produce syntactically valid but semantically wrong SQL. The ReAct loop catches common semantic failures but not all.
 - **Host vs container model caches** — probing host Ollama does not use models pulled by the Compose `ollama` service; both tags must exist on whichever backend `/health` reports.
 - **Latency on CPU-only machines** — see [CPU-Only Fallback](#cpu-only-fallback); 45–90 min per query.

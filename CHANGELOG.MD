@@ -2,6 +2,8 @@
 
 ## eval-enhancement — 2026-05-27
 
+- Docs: added `documented_breaking_points.md` — curated UI stress cases (off-domain narrative, adversarial prime query, case 11 family, host 404, etc.) linked from README Limitations and Reviewer notes.
+
 - Docs: host vs container Ollama use separate model libraries — `resolve_ollama_url()` probes API reachability only; host must `ollama pull` both default tags or synthesis can 404 while SQL succeeds. Documented in README, `runtime_performance.md`, `portability_check_on_my_laptop.md`, `open-questions.md`.
 
 - Host Ollama routing: `LLMClient.resolve_ollama_url()` probes host Ollama (`host.docker.internal:11434`) on first inference call and falls back to the Compose `ollama` service when unreachable; removed hardcoded `OLLAMA_URL` from `docker-compose.yml`; `/health` reports the resolved URL. Rationale: Docker Ollama on Windows/Mac runs CPU-only by default, producing multi-hour eval wall clock; host Ollama uses GPU/Metal without a setup script. Documented measured runs and platform notes in `runtime_performance.md`. + updated `nlp/tests/test_llm_client.py`. Deferred: no integration test that probes host then container inside a running Compose stack.
