@@ -2,6 +2,8 @@
 
 ## eval-remediation — 2026-05-27
 
+- T4 (P3 classifier override): Added `AGGREGATION_OVERRIDES` and post-scan heuristic in `classify` so ranking terms (e.g. `most bought`, `top`) beat TIME_FILTER when both co-occur; new `nlp/tests/test_query_classifier.py` covers case 1, case 2 regression, and bare-`most` guard. Rationale: case 1 matched `on friday` before `most` due to KEYWORD_CLASS_MAP iteration order. Adversarial gap deferred: no test for override when TIME_FILTER keyword appears only in an ISO date suffix on `resolved` (T2 anchor uses digit-only dates).
+
 - T3 (P2 returns constraint): Added `RETURNS_TRIGGERS`, inject `-- REQUIRED: filter return rows with WHERE total < 0` into `build_sql_prompt` when trigger terms appear in the question, and extended AGGREGATION few-shot with a returns example using `total < 0`. Rationale: case 12 executed but omitted the returns filter because the SQL model ignored domain semantics. Adversarial gap deferred: no test for false-positive trigger on phrases like "return customers" (accepted residual per plan).
 
 - T2 (P1 temporal anchor): Added `SemanticLayer.get_date_anchor()`, anchored `recent` disambiguation to `date_range.end` minus 30 days (replacing wall-clock-relative apply text when `semantic_layer` is passed), wired `semantic_layer` through `pipeline.py`, and enriched 0-row SQL observer messages with dataset `date_range` bounds. Rationale: case 11 returned 0 rows because “recent” used calendar-relative dates against a static 2024 dataset. See `.dev/decision-logs/T2-eval-remediation-temporal.md`. Adversarial gap deferred: no test that `get_date_anchor()` rejects malformed ISO in `date_range.start` after YAML load.
