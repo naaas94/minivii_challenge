@@ -45,3 +45,35 @@ def test_build_sql_prompt_order():
     question_pos = prompt.index("Question: How many tickets?")
     instruction_pos = prompt.index("Return only the SQL query")
     assert schema_pos < kpi_pos < few_shot_pos < question_pos < instruction_pos
+
+
+def test_aggregation_few_shot_contains_returns_filter():
+    example = FEW_SHOT_EXAMPLES[QueryClass.AGGREGATION]
+    assert "total < 0" in example
+
+
+def test_returns_prompt_injects_constraint():
+    schema = "CREATE TABLE sales (total REAL, product_name TEXT);"
+    kpis = [{"name": "returns", "definition": "rows where total < 0"}]
+    few_shot = FEW_SHOT_EXAMPLES[QueryClass.AGGREGATION]
+
+    returns_prompt = build_sql_prompt(
+        question="Which product has the most returns?",
+        schema=schema,
+        query_class=QueryClass.AGGREGATION,
+        kpi_definitions=kpis,
+        few_shot_example=few_shot,
+    )
+    assert "-- REQUIRED: filter return rows with WHERE total < 0" in returns_prompt
+    constraint_pos = returns_prompt.index("-- REQUIRED:")
+    question_pos = returns_prompt.index("Question: Which product has the most returns?")
+    assert constraint_pos < question_pos
+
+    plain_prompt = build_sql_prompt(
+        question="What is the most bought product on Fridays?",
+        schema=schema,
+        query_class=QueryClass.AGGREGATION,
+        kpi_definitions=kpis,
+        few_shot_example=few_shot,
+    )
+    assert "-- REQUIRED:" not in plain_prompt

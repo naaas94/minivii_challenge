@@ -2,6 +2,8 @@
 
 ## eval-remediation — 2026-05-27
 
+- T3 (P2 returns constraint): Added `RETURNS_TRIGGERS`, inject `-- REQUIRED: filter return rows with WHERE total < 0` into `build_sql_prompt` when trigger terms appear in the question, and extended AGGREGATION few-shot with a returns example using `total < 0`. Rationale: case 12 executed but omitted the returns filter because the SQL model ignored domain semantics. Adversarial gap deferred: no test for false-positive trigger on phrases like "return customers" (accepted residual per plan).
+
 - T2 (P1 temporal anchor): Added `SemanticLayer.get_date_anchor()`, anchored `recent` disambiguation to `date_range.end` minus 30 days (replacing wall-clock-relative apply text when `semantic_layer` is passed), wired `semantic_layer` through `pipeline.py`, and enriched 0-row SQL observer messages with dataset `date_range` bounds. Rationale: case 11 returned 0 rows because “recent” used calendar-relative dates against a static 2024 dataset. See `.dev/decision-logs/T2-eval-remediation-temporal.md`. Adversarial gap deferred: no test that `get_date_anchor()` rejects malformed ISO in `date_range.start` after YAML load.
 
 - T1 (P4 eval phase 1 — execution gate): Added `execution_pass` to harness case rows and JSONL output; redefined `case_pass` as structural gates plus execution success; added `EvalReport.tier_summary` (`structural`, `execution`, `composite`). README eval table now documents exec and tier pass rates. Rationale: the prior 83% structural headline ignored failed executions (case 11). See `.dev/decision-logs/T1-eval-remediation-phase1.md`. Adversarial gap deferred: no test that written `eval_*.json` rows contain every legacy key plus `execution_pass` (covered indirectly by `run_eval` mocks).
