@@ -155,7 +155,6 @@ Process artifacts (plans, audits, full architecture index) are maintained privat
 ## Reviewer notes
 
 - **First boot:** `docker compose up` pulls ~29 GB of models. `nlp` and `ui` may not start until Ollama is healthy — after models are cached, run `docker compose down && docker compose up` (or start `nlp`/`ui` manually).
-- **Dataset:** `data.csv` is not in the repo. Place it at the repo root before starting Compose; `db` will not start without it.
 - **Ollama routing:** The stack prefers **host Ollama** (GPU/Metal on Windows/Mac) when the API is reachable — **not** when models are present. Host and container have **separate model libraries**; `docker compose` pulls only into the container. If host Ollama is running without `qwen3:32b`, expect a late UI failure at synthesis (404). Pull both default models on the host or set `OLLAMA_URL=http://ollama:11434` on `nlp` to force the container — see [runtime_performance.md](runtime_performance.md).
 - **Latency (GPU, default models):** UI queries ~3–7 min; full 12-case eval with judge ~90–120 min.
 - **Eval outcome:** v1.1 composite **11/12** on the golden set; Case 11 (open-ended “recent sales”) remains the known residual — details in [Evaluation (v1 → v1.1)](#evaluation-v1--v11).
