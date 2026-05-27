@@ -69,12 +69,14 @@ class SQLExecutor:
         sql_model: str,
         log_fn: Callable[..., None] | None = None,
         run_context: dict | None = None,
+        dataset_date_bounds: tuple[str, str] | None = None,
     ):
         self.db_url = db_url.rstrip("/")
         self.llm_client = llm_client
         self.sql_model = sql_model
         self.log_fn = log_fn
         self.run_context = run_context or {}
+        self.dataset_date_bounds = dataset_date_bounds
 
     def execute_react(
         self,
@@ -124,12 +126,19 @@ class SQLExecutor:
         row_count = len(result.data or [])
 
         if row_count == 0:
+            bounds_hint = ""
+            if self.dataset_date_bounds:
+                start, end = self.dataset_date_bounds
+                bounds_hint = (
+                    f" Dataset date_range: {start} to {end}."
+                )
             return ObservationResult(
                 action=Action.REFINE,
                 message=(
                     "Query returned 0 rows. Possible causes: "
                     "filter value mismatch (check product_name or week_day spelling), "
                     "overly restrictive date range, or incorrect column reference."
+                    f"{bounds_hint}"
                 ),
             )
 

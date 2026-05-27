@@ -54,6 +54,7 @@ class Pipeline:
             sql_model=sql_model,
             log_fn=self._log_executor_step,
             run_context=self._run_context,
+            dataset_date_bounds=self.semantic_layer.get_date_anchor(),
         )
         self.result_synthesizer = ResultSynthesizer(llm_client, synthesis_model)
 
@@ -69,7 +70,9 @@ class Pipeline:
         )
 
         t_stage = time.time()
-        resolved = ambiguity_detector.detect_and_resolve(question, self.domain)
+        resolved = ambiguity_detector.detect_and_resolve(
+            question, self.domain, semantic_layer=self.semantic_layer
+        )
         self._run_context["resolved_question"] = resolved.resolved
         self._log(
             run_id,

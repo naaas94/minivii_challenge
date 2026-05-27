@@ -1,12 +1,51 @@
+import logging
 import os
+import urllib.error
+import urllib.request
 from functools import lru_cache
+
+logger = logging.getLogger(__name__)
+
+HOST_OLLAMA_URL = "http://host.docker.internal:11434"
+CONTAINER_OLLAMA_URL = "http://ollama:11434"
+
+
+def _probe_ollama(url: str, timeout: float = 2.0) -> bool:
+    try:
+        with urllib.request.urlopen(f"{url.rstrip('/')}/api/tags", timeout=timeout) as resp:
+            return resp.status == 200
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False
+
+
+@lru_cache(maxsize=1)
+def resolve_ollama_url() -> str:
+    """Pick Ollama backend: explicit OLLAMA_URL, else host, else container."""
+    explicit = os.environ.get("OLLAMA_URL")
+    if explicit:
+        logger.info("Using Ollama at %s (OLLAMA_URL)", explicit)
+        return explicit
+
+    host_url = os.environ.get("OLLAMA_HOST_URL", HOST_OLLAMA_URL)
+    fallback_url = os.environ.get("OLLAMA_FALLBACK_URL", CONTAINER_OLLAMA_URL)
+
+    if _probe_ollama(host_url):
+        logger.info("Using host Ollama at %s", host_url)
+        return host_url
+
+    logger.warning(
+        "Host Ollama unreachable at %s; falling back to %s",
+        host_url,
+        fallback_url,
+    )
+    return fallback_url
 
 
 @lru_cache(maxsize=1)
 def _ollama_client():
     import ollama
 
-    return ollama.Client(host=os.environ["OLLAMA_URL"])
+    return ollama.Client(host=resolve_ollama_url())
 
 
 class LLMClient:

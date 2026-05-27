@@ -50,6 +50,14 @@ class ResultSynthesizer:
             else "None"
         )
 
+        # Constraints target comparative/derived/temporal claims (cases 1–3, 6);
+        # scalar reporting cases (4, 5, 7, 8, 9, 10) should stay fluent.
+        constraints = """Reporting constraints (comparative, derived, or temporal claims only):
+- Do not compare to days, periods, or categories not present in the result sample.
+- Only report arithmetic you can verify from the sample (e.g. hour-span duration, shares, deltas).
+- When citing week-over-week or period changes, use exact week or period labels from the data columns.
+- Do not state temporal labels (week names, months) unless they appear in the result sample."""
+
         return f"""You are a business analyst generating a concise insight from a query result.
 
 Question asked: {question}
@@ -60,9 +68,11 @@ Interpretations applied (business rules used):
 Result summary: {summary}
 Result sample: {sample}
 
+{constraints}
+
 Write a 2–3 sentence analytical narrative that includes:
 1. The concrete finding (specific numbers from the result)
-2. One business implication or actionable observation
+2. One business implication grounded in the sample (avoid speculation beyond the data)
 3. Any interpretation assumptions, stated explicitly
 
 Be factual. Do not invent numbers not present in the result sample.

@@ -33,6 +33,7 @@ services:
   nlp:
     build: ./nlp
     ports: ["8002:8002"]
+    volumes: ["./nlp/logs:/app/logs"]
     networks: [nivii-net]
     depends_on:
       db:
@@ -41,9 +42,11 @@ services:
         condition: service_healthy
     environment:
       - DB_URL=http://db:8001
-      - OLLAMA_URL=http://ollama:11434
+      # OLLAMA_URL unset: nlp probes host Ollama first, falls back to ollama service (see runtime_performance.md)
       - SQL_MODEL=qwen2.5-coder:14b
       - SYNTHESIS_MODEL=qwen3:32b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   ui:
     build: ./ui

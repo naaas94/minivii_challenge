@@ -4,6 +4,12 @@ from pipeline.ambiguity_detector import ResolvedQuestion
 from pipeline.llm_client import LLMClient
 from pipeline.query_classifier import QueryClass
 
+RETURNS_TRIGGERS: tuple[str, ...] = ("return", "refund", "negative")
+
+RETURNS_CONSTRAINT = (
+    "-- REQUIRED: filter return rows with WHERE total < 0"
+)
+
 FEW_SHOT_EXAMPLES: dict[QueryClass, str] = {
     QueryClass.SIMPLE: """
 -- Q: How many transactions happened on Saturdays?
@@ -20,6 +26,15 @@ WHERE week_day = 'Friday'
   AND total > 0
 GROUP BY product_name
 ORDER BY total_qty DESC
+LIMIT 10;
+
+-- Q: Which product has the most returns?
+SELECT product_name,
+       SUM(quantity) AS return_qty
+FROM sales
+WHERE total < 0
+GROUP BY product_name
+ORDER BY return_qty ASC
 LIMIT 10;
 """,
     QueryClass.TIME_FILTER: """
@@ -66,12 +81,17 @@ def build_sql_prompt(
         kpi_lines.append(line)
     kpi_block = "\n".join(kpi_lines)
 
+    question_lower = question.lower()
+    returns_block = ""
+    if any(trigger in question_lower for trigger in RETURNS_TRIGGERS):
+        returns_block = f"\n{RETURNS_CONSTRAINT}\n"
+
     return f"""{schema}
 
 {kpi_block}
 
 {few_shot_example}
-
+{returns_block}
 Question: {question}
 
 Return only the SQL query. No explanation. No markdown fences."""

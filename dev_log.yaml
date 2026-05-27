@@ -131,3 +131,5 @@ dev:
         products with prime totals: 11
         smallest prime answer: ('Tableta 70 cacao x80g', 2)
         "The model generated SQL for “smallest total quantity sold” using now - 30 days, but ignored the prime-number constraint and used a date window with no rows (dataset is 2024, not today). ReAct burned all 4 refinement steps on the same empty result and returned “max steps reached”—a logic/SQL failure that completed in ~4.5 minutes, not a timeout or service outage."}
+
+--- running a full eval and stopping for now - maybe I'll be back after dinner. 

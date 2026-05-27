@@ -13,11 +13,19 @@ from pipeline.sql_executor import (
 
 
 def test_observe_result_zero_rows_refines():
-    executor = SQLExecutor("http://db:8001", LLMClient(), "test-model")
+    executor = SQLExecutor(
+        "http://db:8001",
+        LLMClient(),
+        "test-model",
+        dataset_date_bounds=("2024-09-21", "2024-11-20"),
+    )
     result = ExecutionResult(success=True, data=[])
     obs = executor._observe_result("How many sales?", "SELECT 1", result)
     assert obs.action == Action.REFINE
     assert "0 rows" in obs.message
+    assert "date_range" in obs.message
+    assert "2024-09-21" in obs.message
+    assert "2024-11-20" in obs.message
 
 
 def test_observe_result_accepts_small_scalar_result():

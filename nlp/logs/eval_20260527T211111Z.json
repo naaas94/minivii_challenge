@@ -1,0 +1,452 @@
+{
+  "results": [
+    {
+      "question": "What is the most bought product on Fridays?",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "week_day",
+            true
+          ],
+          [
+            "friday",
+            true
+          ],
+          [
+            "sum(quantity)",
+            true
+          ],
+          [
+            "group by",
+            true
+          ]
+        ],
+        "forbidden_present": [
+          [
+            "sum(total)",
+            false
+          ]
+        ]
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 432065,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "How many transactions happened on Saturdays?",
+      "class": "time_filter",
+      "expected_class": "time_filter",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "count(distinct ticket_number)",
+            true
+          ],
+          [
+            "saturday",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 483029,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "What are the busiest hours on weekdays?",
+      "class": "time_filter",
+      "expected_class": "time_filter",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "hour",
+            true
+          ],
+          [
+            "count(distinct ticket_number)",
+            true
+          ],
+          [
+            "saturday",
+            true
+          ],
+          [
+            "sunday",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 697544,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "What is the total revenue for October 2024?",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "sum(total)",
+            true
+          ],
+          [
+            "2024-10",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 4,
+        "interpretation_fidelity": 5,
+        "issues": "The narrative uses the USD symbol ($), but the reference answer and result sample are in ARS. The number itself is correct, but the currency symbol is inconsistent with the reference."
+      },
+      "latency_ms": 1431951,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "Which waiter generated the most revenue?",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "waiter",
+            true
+          ],
+          [
+            "sum(total)",
+            true
+          ],
+          [
+            "group by",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 432023,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "What is the week-over-week revenue trend?",
+      "class": "window",
+      "expected_class": "window",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "strftime",
+            true
+          ],
+          [
+            "lag(",
+            true
+          ],
+          [
+            "group by",
+            true
+          ]
+        ],
+        "forbidden_present": [
+          [
+            "substr(",
+            false
+          ]
+        ]
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 802304,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "What are the top 5 products by revenue?",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "product_name",
+            true
+          ],
+          [
+            "sum(total)",
+            true
+          ],
+          [
+            "limit 5",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 4,
+        "interpretation_fidelity": 4,
+        "issues": "The 74% figure is slightly inflated (actual is ~72.25%). The narrative correctly identifies the top products but assumes customer preference for 'traditional/celebratory formats' based on product names, which is an inference not explicitly stated in the data."
+      },
+      "latency_ms": 788191,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "How many transactions were there in November?",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "count(distinct ticket_number)",
+            true
+          ],
+          [
+            "2024-11",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 3,
+        "issues": "The narrative adds contextual interpretation (e.g., 'steady customer flow') not directly supported by the raw data, which only provides a transaction count without comparative benchmarks or temporal trends."
+      },
+      "latency_ms": 526055,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "What is the average ticket value per waiter?",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "waiter",
+            true
+          ],
+          [
+            "count(distinct ticket_number)",
+            true
+          ],
+          [
+            "group by",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 687188,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "Show me the most popular product",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "sum(quantity)",
+            true
+          ],
+          [
+            "product_name",
+            true
+          ],
+          [
+            "group by",
+            true
+          ],
+          [
+            "order by",
+            true
+          ],
+          [
+            "desc",
+            true
+          ]
+        ],
+        "forbidden_present": [
+          [
+            "sum(total)",
+            false
+          ]
+        ]
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 459549,
+      "steps_taken": 1,
+      "failure_reason": null
+    },
+    {
+      "question": "What were the recent sales?",
+      "class": "time_filter",
+      "expected_class": "time_filter",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": false,
+      "case_pass": false,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "where",
+            true
+          ],
+          [
+            "date",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": null,
+      "latency_ms": 268106,
+      "steps_taken": 4,
+      "failure_reason": "max steps reached without successful result"
+    },
+    {
+      "question": "Which products have the most returns?",
+      "class": "aggregation",
+      "expected_class": "aggregation",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "execution_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "total < 0",
+            true
+          ],
+          [
+            "product_name",
+            true
+          ],
+          [
+            "group by",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": {
+        "factual_accuracy": 5,
+        "interpretation_fidelity": 5,
+        "issues": null
+      },
+      "latency_ms": 624073,
+      "steps_taken": 1,
+      "failure_reason": null
+    }
+  ],
+  "tier_summary": {
+    "structural": "12/12",
+    "execution": "11/12",
+    "composite": "11/12"
+  }
+}

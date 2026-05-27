@@ -55,11 +55,28 @@ KEYWORD_CLASS_MAP: dict[QueryClass, list[str]] = {
     ],
 }
 
+# Ranking/product terms that beat TIME_FILTER when both co-occur (Option C override).
+# Excludes bare "most" and "how many" so case 2 and "what day has the most …" stay TIME_FILTER.
+AGGREGATION_OVERRIDES: tuple[str, ...] = (
+    "most bought",
+    "most popular",
+    "top",
+    "best",
+    "by product",
+    "by waiter",
+    "per product",
+    "per waiter",
+    "breakdown",
+    "ranking",
+)
+
 
 def classify(question: str, llm_client: LLMClient) -> tuple[QueryClass, str]:
     q = question.lower()
     for cls, keywords in KEYWORD_CLASS_MAP.items():
         if any(kw in q for kw in keywords):
+            if cls == QueryClass.TIME_FILTER and any(term in q for term in AGGREGATION_OVERRIDES):
+                return QueryClass.AGGREGATION, "heuristic_override"
             return cls, "heuristic"
     return _llm_classify(question, llm_client), "llm"
 

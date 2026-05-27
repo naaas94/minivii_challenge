@@ -104,6 +104,20 @@ def test_run_eval_isolates_pipeline_failures(tmp_path):
     assert list(tmp_path.glob("eval_*.json"))
 
 
+def test_judge_synthesis_includes_business_rules_for_known_answer_case():
+    llm = MagicMock(spec=LLMClient)
+    llm.generate.return_value = (
+        '{"factual_accuracy": 5, "interpretation_fidelity": 5, "issues": null}'
+    )
+    harness = EvalHarness(MagicMock(spec=Pipeline), llm, "qwen3:32b")
+    case = TEST_CASES[3]
+    assert case.known_answer is not None
+    harness.judge_synthesis(case.question, [{"total": 1}], "October revenue was high.")
+    prompt = llm.generate.call_args.args[0]
+    assert "Business rules for this question:" in prompt
+    assert case.known_answer in prompt
+
+
 def test_judge_synthesis_truncates_to_ten_rows():
     llm = MagicMock(spec=LLMClient)
     llm.generate.return_value = (
@@ -133,4 +147,33 @@ def test_run_eval_skips_judge_when_requested(tmp_path):
     report = harness.run_eval([case], skip_judge=True)
 
     assert report.results[0]["judge"] is None
+    assert report.tier_summary == {
+        "structural": "1/1",
+        "execution": "1/1",
+        "composite": "1/1",
+    }
     llm.generate.assert_not_called()
+
+
+def test_eval_report_includes_tier_summary_keys(tmp_path):
+    pipeline = MagicMock(spec=Pipeline)
+    pipeline.run.return_value = MagicMock(
+        sql="SELECT 1",
+        query_class="simple",
+        question="q",
+        resolved_question="q",
+        interpretations=[],
+        total_latency_ms=1,
+        narrative=None,
+        execution=ExecutionResult(success=False, data=[], steps_taken=4),
+    )
+    llm = MagicMock(spec=LLMClient)
+    harness = EvalHarness(pipeline, llm, "qwen3:32b", log_dir=tmp_path)
+    case = TestCase("q", "simple", ["select"], [])
+
+    report = harness.run_eval([case], skip_judge=True)
+
+    assert set(report.tier_summary.keys()) == {"structural", "execution", "composite"}
+    assert report.tier_summary["structural"] == "1/1"
+    assert report.tier_summary["execution"] == "0/1"
+    assert report.tier_summary["composite"] == "0/1"
