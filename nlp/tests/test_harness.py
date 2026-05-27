@@ -104,6 +104,20 @@ def test_run_eval_isolates_pipeline_failures(tmp_path):
     assert list(tmp_path.glob("eval_*.json"))
 
 
+def test_judge_synthesis_includes_business_rules_for_known_answer_case():
+    llm = MagicMock(spec=LLMClient)
+    llm.generate.return_value = (
+        '{"factual_accuracy": 5, "interpretation_fidelity": 5, "issues": null}'
+    )
+    harness = EvalHarness(MagicMock(spec=Pipeline), llm, "qwen3:32b")
+    case = TEST_CASES[3]
+    assert case.known_answer is not None
+    harness.judge_synthesis(case.question, [{"total": 1}], "October revenue was high.")
+    prompt = llm.generate.call_args.args[0]
+    assert "Business rules for this question:" in prompt
+    assert case.known_answer in prompt
+
+
 def test_judge_synthesis_truncates_to_ten_rows():
     llm = MagicMock(spec=LLMClient)
     llm.generate.return_value = (

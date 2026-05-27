@@ -33,6 +33,22 @@ def test_synthesize_guard_skips_llm_on_empty_data():
     llm.generate.assert_not_called()
 
 
+def test_build_synthesis_prompt_includes_constraint_block():
+    llm = MagicMock(spec=LLMClient)
+    synthesizer = ResultSynthesizer(llm, "qwen3:32b")
+
+    prompt = synthesizer._build_synthesis_prompt(
+        question="What is total revenue?",
+        data=[{"total": 100}],
+        sql="SELECT SUM(total) AS total FROM sales",
+        interpretations_applied=[],
+        steps_taken=1,
+    )
+
+    assert "Do not compare to days" in prompt
+    assert "Only report arithmetic" in prompt
+
+
 def test_build_synthesis_prompt_truncates_to_ten_rows():
     llm = MagicMock(spec=LLMClient)
     synthesizer = ResultSynthesizer(llm, "qwen3:32b")

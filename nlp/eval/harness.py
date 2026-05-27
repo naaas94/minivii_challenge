@@ -147,6 +147,43 @@ def check_sql_structure(generated_sql: str, case: TestCase) -> dict:
     }
 
 
+def _judge_business_rules_block(question: str) -> str:
+    """Per-case judge rules from TEST_CASES.known_answer or question shape."""
+    q_lower = question.lower()
+    lines: list[str] = []
+
+    for case in TEST_CASES:
+        if case.question == question and case.known_answer:
+            lines.append(f"- Reference answer: {case.known_answer}")
+            lines.append(
+                "- Penalize narratives that contradict this reference or cite numbers "
+                "not supported by the result sample."
+            )
+            break
+
+    if any(term in q_lower for term in ("return", "refund")):
+        lines.append("- Returns are rows where total < 0.")
+        lines.append(
+            "- Fail interpretation_fidelity if the narrative treats positive totals as "
+            "returns or omits that returns use negative totals."
+        )
+
+    if "week-over-week" in q_lower or "week over week" in q_lower:
+        lines.append(
+            "- Week-over-week claims must use week labels present in result columns."
+        )
+        lines.append(
+            "- Penalize temporal labels (week names/numbers) not appearing in the "
+            "result sample."
+        )
+
+    if not lines:
+        return ""
+
+    body = "\n".join(lines)
+    return f"Business rules for this question:\n{body}\n\n"
+
+
 def parse_json(response: str) -> dict:
     text = response.strip()
     try:
@@ -188,10 +225,11 @@ class EvalHarness:
             "total_rows": len(data),
             "columns": list(data[0].keys()) if data else [],
         }
+        business_rules = _judge_business_rules_block(question)
         prompt = f"""Evaluate whether this narrative faithfully represents the query result.
 
 Question: {question}
-Result summary: {summary}
+{business_rules}Result summary: {summary}
 Result sample (first {len(sample)} rows): {sample}
 Narrative: {narrative}
 
