@@ -37,6 +37,7 @@ class JudgeScore:
 @dataclass
 class EvalReport:
     results: list[dict]
+    tier_summary: dict[str, str]
 
 
 TEST_CASES = [
@@ -224,7 +225,13 @@ Respond with JSON only:
                 sql_score = self.check_sql_structure(pipeline_result.sql, case)
                 class_pass = check_class_match(pipeline_result.query_class, case)
                 ambiguity_pass = check_ambiguity(case_num, pipeline_result)
-                case_pass = sql_score["pass"] and class_pass and ambiguity_pass
+                execution_pass = pipeline_result.execution.success
+                case_pass = (
+                    sql_score["pass"]
+                    and class_pass
+                    and ambiguity_pass
+                    and execution_pass
+                )
                 judge_score = None
                 if not skip_judge and pipeline_result.narrative:
                     judge_score = self.judge_synthesis(
@@ -239,6 +246,7 @@ Respond with JSON only:
                     "sql_pass": sql_score["pass"],
                     "class_pass": class_pass,
                     "ambiguity_pass": ambiguity_pass,
+                    "execution_pass": execution_pass,
                     "case_pass": case_pass,
                     "sql_detail": sql_score,
                     "judge": dataclasses.asdict(judge_score) if judge_score else None,
@@ -253,6 +261,7 @@ Respond with JSON only:
                     "sql_pass": False,
                     "class_pass": False,
                     "ambiguity_pass": False,
+                    "execution_pass": False,
                     "case_pass": False,
                 }
             results.append(result_entry)
@@ -260,17 +269,30 @@ Respond with JSON only:
                 f"[{i + 1}/{total}] "
                 f"{'PASS' if result_entry.get('case_pass') else 'FAIL'} "
                 f"(sql={result_entry.get('sql_pass')}, class={result_entry.get('class_pass')}, "
-                f"amb={result_entry.get('ambiguity_pass')}): "
+                f"amb={result_entry.get('ambiguity_pass')}, "
+                f"exec={result_entry.get('execution_pass')}): "
                 f"{case.question[:60]}"
             )
         sql_passes = sum(1 for r in results if r.get("sql_pass"))
         class_passes = sum(1 for r in results if r.get("class_pass"))
+        structural_passes = sum(
+            1
+            for r in results
+            if r.get("sql_pass") and r.get("class_pass") and r.get("ambiguity_pass")
+        )
+        execution_passes = sum(1 for r in results if r.get("execution_pass"))
         case_passes = sum(1 for r in results if r.get("case_pass"))
+        tier_summary = {
+            "structural": f"{structural_passes}/{total}",
+            "execution": f"{execution_passes}/{total}",
+            "composite": f"{case_passes}/{total}",
+        }
         print(
-            f"Summary: {case_passes}/{total} cases passed | "
+            f"Summary: composite {case_passes}/{total} | "
+            f"structural {structural_passes}/{total} | execution {execution_passes}/{total} | "
             f"SQL {sql_passes}/{total} | class {class_passes}/{total}"
         )
-        report = EvalReport(results=results)
+        report = EvalReport(results=results, tier_summary=tier_summary)
         self._write_report(report)
         return report
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## eval-remediation — 2026-05-27
+
+- T1 (P4 eval phase 1 — execution gate): Added `execution_pass` to harness case rows and JSONL output; redefined `case_pass` as structural gates plus execution success; added `EvalReport.tier_summary` (`structural`, `execution`, `composite`). README eval table now documents exec and tier pass rates. Rationale: the prior 83% structural headline ignored failed executions (case 11). See `.dev/decision-logs/T1-eval-remediation-phase1.md`. Adversarial gap deferred: no test that written `eval_*.json` rows contain every legacy key plus `execution_pass` (covered indirectly by `run_eval` mocks).
+
 ## minivii-build — 2026-05-26
 
 - T1 (Project scaffold and Docker infrastructure): Added directory tree, Dockerfiles, docker-compose.yml, ollama entrypoint, requirements stubs, domain.yaml semantic layer, and .gitignore. Establishes the four-container Compose layout and frozen naming contracts for downstream subtasks. Test coverage deferred: T1 contract explicitly waives tests; automated compose/port/env validation deferred to T2 smoke test and T7 full stack bring-up.

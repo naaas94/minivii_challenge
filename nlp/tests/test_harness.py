@@ -133,4 +133,33 @@ def test_run_eval_skips_judge_when_requested(tmp_path):
     report = harness.run_eval([case], skip_judge=True)
 
     assert report.results[0]["judge"] is None
+    assert report.tier_summary == {
+        "structural": "1/1",
+        "execution": "1/1",
+        "composite": "1/1",
+    }
     llm.generate.assert_not_called()
+
+
+def test_eval_report_includes_tier_summary_keys(tmp_path):
+    pipeline = MagicMock(spec=Pipeline)
+    pipeline.run.return_value = MagicMock(
+        sql="SELECT 1",
+        query_class="simple",
+        question="q",
+        resolved_question="q",
+        interpretations=[],
+        total_latency_ms=1,
+        narrative=None,
+        execution=ExecutionResult(success=False, data=[], steps_taken=4),
+    )
+    llm = MagicMock(spec=LLMClient)
+    harness = EvalHarness(pipeline, llm, "qwen3:32b", log_dir=tmp_path)
+    case = TestCase("q", "simple", ["select"], [])
+
+    report = harness.run_eval([case], skip_judge=True)
+
+    assert set(report.tier_summary.keys()) == {"structural", "execution", "composite"}
+    assert report.tier_summary["structural"] == "1/1"
+    assert report.tier_summary["execution"] == "0/1"
+    assert report.tier_summary["composite"] == "0/1"
