@@ -1,6 +1,8 @@
 # Changelog
 
-## eval-remediation — 2026-05-27
+## eval-enhancement — 2026-05-27
+
+- Host Ollama routing: `LLMClient.resolve_ollama_url()` probes host Ollama (`host.docker.internal:11434`) on first inference call and falls back to the Compose `ollama` service when unreachable; removed hardcoded `OLLAMA_URL` from `docker-compose.yml`; `/health` reports the resolved URL. Rationale: Docker Ollama on Windows/Mac runs CPU-only by default, producing multi-hour eval wall clock; host Ollama uses GPU/Metal without a setup script. Documented measured runs and platform notes in `runtime_performance.md`. + updated `nlp/tests/test_llm_client.py`. Adversarial gap deferred: no integration test that probes host then container inside a running Compose stack.
 
 - T5 (P5 narrative hardening): Hardened `_build_synthesis_prompt` with a comparative/derived/temporal constraint block (`Do not compare`, `Only report arithmetic`) and enriched `judge_synthesis` via `_judge_business_rules_block` using `TEST_CASES.known_answer` lookup plus returns/week-over-week question heuristics. Rationale: judge failures clustered on unsupported comparatives and invented temporal labels, not scalar reporting. Case 12 has `known_answer=None` so judge enrichment does not fire there until `result_assertions` lands (Flag 7). Adversarial gap deferred: no test that judge prompt includes returns rules when `known_answer` is None but question mentions returns (heuristic path untested in isolation).
 

@@ -1,0 +1,100 @@
+{
+  "results": [
+    {
+      "question": "What is the most bought product on Fridays?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.420638+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "How many transactions happened on Saturdays?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.421100+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What are the busiest hours on weekdays?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.421441+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What is the total revenue for October 2024?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.421699+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "Which waiter generated the most revenue?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.421893+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What is the week-over-week revenue trend?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.422079+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What are the top 5 products by revenue?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.422211+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "How many transactions were there in November?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.422343+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What is the average ticket value per waiter?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.422472+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "Show me the most popular product",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.422612+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What were the recent sales?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.422742+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "Which products have the most returns?",
+      "error": "[Errno 22] Invalid argument: 'logs\\\\runs\\\\2026-05-26T20:29:41.422870+00:00.jsonl'",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    }
+  ]
+}

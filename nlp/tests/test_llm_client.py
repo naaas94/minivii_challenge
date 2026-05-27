@@ -3,14 +3,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pipeline.llm_client import LLMClient, _ollama_client
+from pipeline.llm_client import (
+    CONTAINER_OLLAMA_URL,
+    HOST_OLLAMA_URL,
+    LLMClient,
+    _ollama_client,
+    resolve_ollama_url,
+)
 
 
 @pytest.fixture(autouse=True)
 def clear_ollama_client_cache():
     _ollama_client.cache_clear()
+    resolve_ollama_url.cache_clear()
     yield
     _ollama_client.cache_clear()
+    resolve_ollama_url.cache_clear()
 
 
 def test_ollama_generate_uses_client_with_ollama_url_host():
@@ -27,12 +35,18 @@ def test_ollama_generate_uses_client_with_ollama_url_host():
     assert result == "ok"
 
 
-def test_ollama_url_missing_raises_key_error_on_generate():
+def test_resolve_ollama_url_prefers_host_when_reachable():
     os.environ.pop("OLLAMA_URL", None)
 
-    client = LLMClient(backend="ollama")
-    with pytest.raises(KeyError, match="OLLAMA_URL"):
-        client.generate("hello")
+    with patch("pipeline.llm_client._probe_ollama", side_effect=lambda url, timeout=2.0: url == HOST_OLLAMA_URL):
+        assert resolve_ollama_url() == HOST_OLLAMA_URL
+
+
+def test_resolve_ollama_url_falls_back_to_container_when_host_unreachable():
+    os.environ.pop("OLLAMA_URL", None)
+
+    with patch("pipeline.llm_client._probe_ollama", return_value=False):
+        assert resolve_ollama_url() == CONTAINER_OLLAMA_URL
 
 
 def test_ollama_generate_does_not_use_module_level_generate():

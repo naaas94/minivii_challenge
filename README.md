@@ -16,6 +16,8 @@ docker compose up
 # Open http://localhost:3001
 ```
 
+See [runtime_performance.md](runtime_performance.md) for Ollama host vs container latency (install host Ollama on Mac/Windows for acceptable inference speed).
+
 **First-run note: ~29 GB download** (`qwen2.5-coder:14b` ~9 GB + `qwen3:32b` ~20 GB). Subsequent runs use the cached `ollama_cache` volume — no re-download.
 
 ### Environment variables
@@ -23,7 +25,7 @@ docker compose up
 | Variable | Default | Purpose |
 |---|---|---|
 | `DB_URL` | `http://db:8001` | Database service endpoint |
-| `OLLAMA_URL` | `http://ollama:11434` | Ollama inference endpoint |
+| `OLLAMA_URL` | *(auto)* | Ollama endpoint. Unset: probe host (`host.docker.internal:11434`), then fall back to `ollama:11434`. Set to override. |
 | `SQL_MODEL` | `qwen2.5-coder:14b` | SQL generation and refinement |
 | `SYNTHESIS_MODEL` | `qwen3:32b` | Narrative synthesis |
 

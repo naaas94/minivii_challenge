@@ -1,0 +1,119 @@
+{
+  "results": [
+    {
+      "question": "What is the most bought product on Fridays?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.3 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "How many transactions happened on Saturdays?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.3 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What are the busiest hours on weekdays?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.3 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What is the total revenue for October 2024?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.3 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "Which waiter generated the most revenue?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.2 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What is the week-over-week revenue trend?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.2 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What are the top 5 products by revenue?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.1 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "How many transactions were there in November?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.1 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What is the average ticket value per waiter?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.1 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "Show me the most popular product",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.0 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    },
+    {
+      "question": "What were the recent sales?",
+      "class": "time_filter",
+      "expected_class": "time_filter",
+      "sql_pass": true,
+      "class_pass": true,
+      "ambiguity_pass": true,
+      "case_pass": true,
+      "sql_detail": {
+        "pass": true,
+        "expected_present": [
+          [
+            "where",
+            true
+          ],
+          [
+            "date",
+            true
+          ]
+        ],
+        "forbidden_present": []
+      },
+      "judge": null,
+      "latency_ms": 219691,
+      "steps_taken": 4,
+      "failure_reason": "max steps reached without successful result"
+    },
+    {
+      "question": "Which products have the most returns?",
+      "error": "model requires more system memory (20.0 GiB) than is available (19.0 GiB) (status code: 500)",
+      "sql_pass": false,
+      "class_pass": false,
+      "ambiguity_pass": false,
+      "case_pass": false
+    }
+  ]
+}

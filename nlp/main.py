@@ -5,11 +5,10 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from pipeline.llm_client import LLMClient
+from pipeline.llm_client import LLMClient, resolve_ollama_url
 from pipeline.pipeline import Pipeline
 
 DB_URL = os.environ.get("DB_URL", "http://db:8001")
-OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 SQL_MODEL = os.environ.get("SQL_MODEL", "qwen2.5-coder:14b")
 SYNTHESIS_MODEL = os.environ.get("SYNTHESIS_MODEL", "qwen3:32b")
 
@@ -39,4 +38,4 @@ def query(request: QueryRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "ollama_url": OLLAMA_URL}
+    return {"status": "ok", "ollama_url": resolve_ollama_url()}
