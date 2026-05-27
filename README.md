@@ -18,7 +18,7 @@ docker compose up
 
 See [runtime_performance.md](runtime_performance.md) for Ollama host vs container latency (install host Ollama on Mac/Windows for acceptable inference speed).
 
-**First-run note: ~29 GB download** (`qwen2.5-coder:14b` ~9 GB + `qwen3:32b` ~20 GB) and **~20 GB RAM or VRAM** recommended for the default model pair. Subsequent runs use the cached `ollama_cache` volume — no re-download.
+**First-run note: ~29 GB download** (`qwen2.5-coder:14b` ~9 GB + `qwen3:32b` ~20 GB) and **~20 GB RAM or VRAM** recommended for the default model pair. Compose pulls into the **container** `ollama_cache` volume. If `/health` shows **host** Ollama (`host.docker.internal`), pull **both** tags on the host too (`ollama pull qwen2.5-coder:14b` and `ollama pull qwen3:32b`) — otherwise SQL may run and synthesis can fail with `model not found` (404). See [runtime_performance.md](runtime_performance.md#separate-model-libraries-host-vs-container).
 
 **Compose bootstrapping:** On first clone, Ollama pulls models while `nlp` and `ui` wait on `ollama: service_healthy`. After models are cached, run `docker compose down && docker compose up` (or start `nlp`/`ui` manually) so the full stack comes up.
 
@@ -156,7 +156,7 @@ Process artifacts (plans, audits, full architecture index) are maintained privat
 
 - **First boot:** `docker compose up` pulls ~29 GB of models. `nlp` and `ui` may not start until Ollama is healthy — after models are cached, run `docker compose down && docker compose up` (or start `nlp`/`ui` manually).
 - **Dataset:** `data.csv` is not in the repo. Place it at the repo root before starting Compose; `db` will not start without it.
-- **Ollama routing:** The stack prefers **host Ollama** (GPU/Metal on Windows/Mac). Container Ollama is the fallback and is often CPU-only — see [runtime_performance.md](runtime_performance.md).
+- **Ollama routing:** The stack prefers **host Ollama** (GPU/Metal on Windows/Mac) when the API is reachable — **not** when models are present. Host and container have **separate model libraries**; `docker compose` pulls only into the container. If host Ollama is running without `qwen3:32b`, expect a late UI failure at synthesis (404). Pull both default models on the host or set `OLLAMA_URL=http://ollama:11434` on `nlp` to force the container — see [runtime_performance.md](runtime_performance.md).
 - **Latency (GPU, default models):** UI queries ~3–7 min; full 12-case eval with judge ~90–120 min.
 - **Eval outcome:** v1.1 composite **11/12** on the golden set; Case 11 (open-ended “recent sales”) remains the known residual — details in [Evaluation (v1 → v1.1)](#evaluation-v1--v11).
 - **Fully local:** All inference via Ollama; no external API calls in the submitted system.
@@ -269,6 +269,7 @@ What would change for a real Nivii deployment beyond this demo:
 ## Limitations
 
 - **Local model SQL reliability** — small models can produce syntactically valid but semantically wrong SQL. The ReAct loop catches common semantic failures but not all.
+- **Host vs container model caches** — probing host Ollama does not use models pulled by the Compose `ollama` service; both tags must exist on whichever backend `/health` reports.
 - **Latency on CPU-only machines** — see [CPU-Only Fallback](#cpu-only-fallback); 45–90 min per query.
 - **Dataset scope** — 60 days (Sep 21 – Nov 20, 2024); annual or year-over-year queries return partial results only.
 - **AmbiguityDetector rule coverage** — finite rule set; novel phrasings may not trigger resolution.

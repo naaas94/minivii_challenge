@@ -24,6 +24,36 @@ Set `OLLAMA_URL` yourself if you want to force one or the other.
 
 ---
 
+## Separate model libraries (host vs container)
+
+`resolve_ollama_url()` only checks that the Ollama **API** responds (`/api/tags` returns 200). It does **not** check that `SQL_MODEL` and `SYNTHESIS_MODEL` are installed on that backend.
+
+| Backend | Who pulls default models? |
+|---------|---------------------------|
+| **Container** (`http://ollama:11434`) | `ollama/entrypoint.sh` on first `docker compose up` (~29 GB into volume `ollama_cache`) |
+| **Host** (`http://host.docker.internal:11434`) | **You** — `ollama pull` on the machine where host Ollama runs |
+
+**Typical failure:** Host Ollama is running and has `qwen2.5-coder:14b` (SQL stage OK) but not `qwen3:32b` → UI error at synthesis: `model 'qwen3:32b' not found` (404). Container may already have both.
+
+**Fix (pick one):**
+
+```bash
+# On the host (outside Docker), same tags as compose defaults:
+ollama pull qwen2.5-coder:14b
+ollama pull qwen3:32b
+```
+
+Or force the container backend for `nlp` (CPU-heavy on Win/Mac):
+
+```yaml
+# docker-compose.yml — nlp service environment (example)
+OLLAMA_URL=http://ollama:11434
+```
+
+Restart `nlp` after changing env. Confirm with `curl http://localhost:8002/health`.
+
+---
+
 ## Why this matters
 
 The Linux Ollama container does **not** get GPU access from Docker Desktop on Windows or Mac by default. Without host routing, inference runs on **CPU only** inside the container — multi-hour eval runs, roughly 15–20 min per query.
@@ -65,7 +95,7 @@ Install Ollama on your machine before `docker compose up` to avoid the container
 | **Mac (Apple Silicon)** | Ollama on the Mac (Metal) | Docker Ollama container (CPU) |
 | **Linux + NVIDIA** | Ollama on the host (GPU) | Docker Ollama container (CPU) |
 
-Host and container keep **separate model caches**. If you switch between them, pull the models on whichever Ollama instance you are using.
+Host and container keep **separate model caches** (see [Separate model libraries](#separate-model-libraries-host-vs-container)). If you switch between them, pull **both** default models on whichever backend `/health` reports.
 
 ---
 

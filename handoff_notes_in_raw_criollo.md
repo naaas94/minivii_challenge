@@ -19,6 +19,7 @@ Una vez que clone -> docker compose up --build -> ollama va a tener que pull los
 ## Ollama y Runtime 
 
 Ollama dentro del container no va a querer correr en GPU a menos que docker este configurado para que lo haga. Asi que por default Ollama container va a tratar de hablar con Ollama host y no con Ollama container, if possible, para hacer uso del GPU. CPU como fallback pero esto x2-3 el runtime. 
+***Los modelos auto-pull in-container only. Si el host-probe conecta a Ollama host, los modelos tienen que estar ahi tambien sino tira un 404. Asi que hay que correr un ollama pull por separado.***
 
 ## Fully-Local
 

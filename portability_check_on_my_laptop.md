@@ -14,6 +14,7 @@
 - **Results** — stack/UI/tests pass; default 14b/32b partial (SQL ok, synthesis OOM); full e2e with 7b/8b in ~15.7 min
 - **Confirmed** — same SQL answers as primary dev workstation when the SQL stage completes; nothing changed in the cloned repo
 - **Verdict** — portability yes; performance / full-default parity no on this hardware
+- **Host Ollama caveat** — if the primary PC routes to host Ollama, both `qwen2.5-coder:14b` and `qwen3:32b` must be pulled **on the host**; Compose only pulls into the container volume (synthesis 404 if host has SQL model but not 32b)
 
 ---
 
@@ -93,9 +94,11 @@ This matches the README [CPU-Only Fallback](README.md#cpu-only-fallback) intent 
 
 ### Default models (14b + 32b, via UI / running `nlp` service)
 
-Representative runs: SQL stage ~8–9 min (CPU), execution pass, synthesis fails with Ollama `model requires more system memory (20.0 GiB) than is available (13.0 GiB)`.
+Representative runs on this laptop: SQL stage ~8–9 min (CPU), execution pass, synthesis fails with Ollama `model requires more system memory (20.0 GiB) than is available (13.0 GiB)`.
 
-**Confirmed:** Same pipeline logic and same SQL row answers as the primary workstation when SQL completes; synthesis blocked by RAM, not by clone-specific code.
+On a GPU host with **host** routing, a different synthesis failure is common: `model 'qwen3:32b' not found` (404) when only the container received `ollama pull` for 32b. Same stage (synthesis), different cause — missing tag on host vs RAM on container.
+
+**Confirmed:** Same pipeline logic and same SQL row answers as the primary workstation when SQL completes; synthesis blocked by environment (RAM or missing host model), not by clone-specific code.
 
 ### Fallback models (7b + 8b, `compose run -e`)
 

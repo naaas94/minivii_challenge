@@ -48,6 +48,16 @@ Should host-Ollama routing be integration-tested inside a running Compose stack?
 
 **Note:** Unit tests mock urllib probe; no compose-level integration test yet.
 
+## Host-Ollama model presence (probe vs tags)
+
+Should `resolve_ollama_url()` require both `SQL_MODEL` and `SYNTHESIS_MODEL` in `/api/tags` before choosing host, or fall back to container when either tag is missing?
+
+**Impact:** `nlp/pipeline/llm_client.py`, first-run UX when host Ollama is up but only partially pulled
+
+**Closes when:** Model-aware probe ships, or documented operator workflow (pull both on host) is accepted as demo-scope
+
+**Note:** Observed 2026-05-28 — UI SQL OK, synthesis 404 `qwen3:32b not found` on host while container had both models. Documented in `runtime_performance.md` and README Reviewer notes.
+
 ## Resolved
 
 - **Schema retrieval vs full injection:** Resolved — demo uses full injection via `SchemaLinker.link()` ignoring question; retrieval documented as README scale-out future work only.
