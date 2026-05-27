@@ -33,6 +33,7 @@ services:
   nlp:
     build: ./nlp
     ports: ["8002:8002"]
+    volumes: ["./nlp/logs:/app/logs"]
     networks: [nivii-net]
     depends_on:
       db:
