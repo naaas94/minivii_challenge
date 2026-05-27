@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -13,6 +14,20 @@ class SemanticLayer:
 
     def get_kpis(self) -> list[dict]:
         return self.descriptor.get("kpis", [])
+
+    def get_date_anchor(self) -> tuple[str, str]:
+        """Return (date_range.start, date_range.end) as ISO-8601 strings from domain.yaml."""
+        sales = self.descriptor.get("tables", {}).get("sales", {})
+        date_range = sales.get("date_range", {})
+        start = date_range.get("start")
+        end = date_range.get("end")
+        if not isinstance(start, str) or not isinstance(end, str):
+            raise KeyError(
+                "domain.yaml tables.sales.date_range must define start and end as ISO strings"
+            )
+        date.fromisoformat(start)
+        date.fromisoformat(end)
+        return (start, end)
 
     def render_ddl(self) -> str:
         """Render CREATE TABLE DDL with comments from the YAML descriptor (spec §5.2)."""
