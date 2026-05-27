@@ -4,13 +4,13 @@
 
 v1 funcionaba bien. Pero 2 de los 12 test cases del golden-set no estaban pasando y tampoco era robusta el evaluation breakdown ya que estaba implicito en formulas. 
 
-v1.1 es mas robusto, cubre mas coverage y demanera mas implicita. El success rate en el mismo golden-set es de 11/12 vs 10/12, puede parecer marginal el improvement pero desglosado el pass rate es mas bien: v1 72-83% ish vs v1.1 92-96% across 5 categories. 1.1 is as far as I'm going to take it for this challenge.
+v1.1 es tiered y mas robusto, cubre mas coverage y de manera mas explicita. El success rate en el mismo golden-set es de 11/12 vs 10/12, puede parecer marginal el improvement pero desglosado el pass rate es mas bien: v1 72-83% ish vs v1.1 92-96% across 5 categories. 1.1 is as far as I'm going to take it for this challenge.
     - Potential remediations to look into: 
         - [case-11] ReAct observer false positive in _observe_result: 10k > rows = obsrver piensa que fue un aggregation miss. Podría probar anulando el T de 10 k para open-ended queries.
 
 ## Dataset 
 
-No quería commit it pero tampoco quería que al correr docker compose up en su fin post clone, el db container no arranque por data.csv not present y causara downstream que nlp y ui tampoco arranquen. 
+No quería commit it pero tampoco quería que al correr docker compose up --build en su fin post clone, el db container no arranque por data.csv not present y causara downstream que nlp y ui tampoco arranquen. 
 
 ## Docker Compose 
 
@@ -60,11 +60,8 @@ Cada capa es auditable:
 
 Bien documentados atravez del repo pero es clave aclarar que la complejidad agregada de DIN-SQL, 4 containers, dos modelos, ReAct, no es accidental y cada decision tiene un rationale y trade-off documentado. 
     - README Architecture Decision Table
-    - Decision logs en .dev/
+    - Decision logs
     - Eval Table con updates v1 -> v1.1
     
-Corriendo modelos locales tenés que tener sus debilidades en mente.
-
-## Closing
 
 

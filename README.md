@@ -18,16 +18,22 @@ docker compose up
 
 See [runtime_performance.md](runtime_performance.md) for Ollama host vs container latency (install host Ollama on Mac/Windows for acceptable inference speed).
 
-**First-run note: ~29 GB download** (`qwen2.5-coder:14b` ~9 GB + `qwen3:32b` ~20 GB). Subsequent runs use the cached `ollama_cache` volume — no re-download.
+**First-run note: ~29 GB download** (`qwen2.5-coder:14b` ~9 GB + `qwen3:32b` ~20 GB) and **~20 GB RAM or VRAM** recommended for the default model pair. Subsequent runs use the cached `ollama_cache` volume — no re-download.
+
+**Compose bootstrapping:** On first clone, Ollama pulls models while `nlp` and `ui` wait on `ollama: service_healthy`. After models are cached, run `docker compose down && docker compose up` (or start `nlp`/`ui` manually) so the full stack comes up.
 
 ### Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `DB_URL` | `http://db:8001` | Database service endpoint |
-| `OLLAMA_URL` | *(auto)* | Ollama endpoint. Unset: probe host (`host.docker.internal:11434`), then fall back to `ollama:11434`. Set to override. |
+| `OLLAMA_URL` | *(auto)* | Ollama endpoint. Unset: probe host, then fall back to container. Set to override either path. |
+| `OLLAMA_HOST_URL` | `http://host.docker.internal:11434` | Host Ollama probe target when `OLLAMA_URL` is unset |
+| `OLLAMA_FALLBACK_URL` | `http://ollama:11434` | Container Ollama fallback when host probe fails |
 | `SQL_MODEL` | `qwen2.5-coder:14b` | SQL generation and refinement |
 | `SYNTHESIS_MODEL` | `qwen3:32b` | Narrative synthesis |
+
+Check which Ollama backend is active: `GET http://localhost:8002/health` returns `"ollama_url"` with the resolved endpoint.
 
 ### Service ports
 
@@ -87,16 +93,16 @@ Four-container Docker Compose layout on bridge network `nivii-net`:
 NL Question
     │
     ▼
-AmbiguityDetector     Rule-based pre-generation: resolve underspecified axes (zero latency)
+AmbiguityDetector     Rule-based pre-generation; dataset-anchored date resolution (not wall clock)
     │
     ▼
-QueryClassifier       Keyword heuristic (60–70% coverage) + LLM fallback
+QueryClassifier       Keyword heuristic (60–70% coverage) + LLM fallback; aggregation override when ranking + time keywords co-occur
     │
     ▼
 SchemaLinker          Injects CREATE TABLE DDL from semantic layer (full schema, single table)
     │
     ▼
-SQLGenerator          NL + linked schema → SQL (qwen2.5-coder:14b)
+SQLGenerator          NL + linked schema → SQL; returns filter injection when trigger terms detected (qwen2.5-coder:14b)
     │
     ▼
 SQLExecutor           ReAct loop: execute → observe → decide → refine (semantic failure detection)
@@ -126,6 +132,36 @@ Each stage writes structured JSONL logs under `logs/runs/` for auditability.
 | Four containers over monolith | Each service independently scalable; clear separation of concerns | More orchestration complexity |
 | Two-model strategy (14B SQL + 32B synthesis) | Task-matched: SQL needs code precision, synthesis needs narrative reasoning | ~29 GB download; synthesis 2–5 min |
 | Structural few-shot examples | Demonstrates expected SQL shape per class without overfitting to specific values | One example per class may not cover all variations |
+| Dataset-anchored temporal disambiguation | Static 2024 CSV; wall-clock "recent" returns 0 rows | Requires semantic layer date bounds |
+| Returns trigger injection in SQL prompt | Local SQL model ignores domain semantics for negative totals | False positives possible (e.g. "return customers") |
+| Aggregation keyword override in classifier | Day-of-week keywords won map iteration over ranking terms | Finite override list |
+
+---
+
+## Engineering approach
+
+Built with contract-first, staged execution rather than single-shot codegen:
+
+- Spec-bound Docker scaffold, then service-by-service implementation with explicit kill criteria
+- Tiered evaluation (structural → execution → composite), not a single pass-rate headline
+- Failure-driven remediation (v1 → v1.1) traced to golden-set cases, not prompt thrashing
+- Rule-based disambiguation and ReAct observation to limit LLM calls on the hot path
+- Standing open-question backlog — see [open-questions.md](open-questions.md)
+
+Process artifacts (plans, audits, full architecture index) are maintained privately; happy to walk through the workflow in a technical interview.
+
+---
+
+## Reviewer notes
+
+- **First boot:** `docker compose up` pulls ~29 GB of models. `nlp` and `ui` may not start until Ollama is healthy — after models are cached, run `docker compose down && docker compose up` (or start `nlp`/`ui` manually).
+- **Dataset:** `data.csv` is not in the repo. Place it at the repo root before starting Compose; `db` will not start without it.
+- **Ollama routing:** The stack prefers **host Ollama** (GPU/Metal on Windows/Mac). Container Ollama is the fallback and is often CPU-only — see [runtime_performance.md](runtime_performance.md).
+- **Latency (GPU, default models):** UI queries ~3–7 min; full 12-case eval with judge ~90–120 min.
+- **Eval outcome:** v1.1 composite **11/12** on the golden set; Case 11 (open-ended “recent sales”) remains the known residual — details in [Evaluation (v1 → v1.1)](#evaluation-v1--v11).
+- **Fully local:** All inference via Ollama; no external API calls in the submitted system.
+- **Informal handoff (EN/ES):** [handoff_notes_in_raw_criollo.md](handoff_notes_in_raw_criollo.md)
+- **Portability (2nd machine):** [portability_check_on_my_laptop.md](portability_check_on_my_laptop.md) — clean clone on ~14 GB RAM Windows; `compose run -e` for CPU fallback when default models OOM
 
 ---
 
@@ -154,38 +190,54 @@ docker compose exec nlp python -m eval.harness --skip-judge
 
 Results are written to `logs/eval_{timestamp}.json`.
 
-### Evaluation Results (structural, skip_judge=True)
+### Evaluation (v1 → v1.1)
+
+The golden set is 12 POS-domain cases across four query classes. v1 established the harness and a structural baseline; v1.1 added explicit execution gating, dataset-anchored temporal disambiguation, returns SQL constraints, classifier overrides, and synthesis/judge hardening. Composite pass rate moved **9/12 → 11/12**; structural gates **10/12 → 12/12**; execution stayed **11/12**. The remaining gap is Case 11 (open-ended "recent sales") — ReAct still exhausts max steps despite dataset date anchoring.
+
+#### v1 baseline (2026-05-26, `--skip-judge`)
 
 Run date: 2026-05-26  
-Environment: Docker `nlp` container (Linux), host GPU Ollama via `host.docker.internal:11434`; models `qwen2.5-coder:14b` / `qwen3:30b`  
-Command: `docker compose run --no-deps nlp python -m eval.harness --skip-judge` (db on Compose network; `nlp` service not started — equivalent to `docker compose exec nlp python -m eval.harness --skip-judge` when stack is up)
+Environment: Docker `nlp` container (Linux), host GPU Ollama via `host.docker.internal:11434`; models `qwen2.5-coder:14b` / `qwen3:32b`  
+Command: `docker compose run --no-deps nlp python -m eval.harness --skip-judge`
 
-| Case | Question summary | SQL pass | Class pass | Exec pass | Notes |
-|------|-----------------|---------|-----------|----------|-------|
-| 1 | Most bought product on Fridays | ✓ | ✗ | ✓ | SQL correct; keyword classifier returned `time_filter` (Friday) vs expected `aggregation` |
-| 2 | Transactions on Saturdays | ✓ | ✓ | ✓ | |
-| 3 | Busiest hours on weekdays | ✓ | ✓ | ✓ | |
-| 4 | Total revenue October 2024 | ✓ | ✓ | ✓ | |
-| 5 | Waiter most revenue | ✓ | ✓ | ✓ | |
-| 6 | Week-over-week revenue trend | ✓ | ✓ | ✓ | |
-| 7 | Top 5 products by revenue | ✓ | ✓ | ✓ | |
-| 8 | Transactions in November | ✓ | ✓ | ✓ | |
-| 9 | Average ticket value per waiter | ✓ | ✓ | ✓ | |
-| 10 | Most popular product (ambiguity) | ✓ | ✓ | ✓ | Ambiguity resolution applied |
-| 11 | Recent sales (ambiguity) | ✓ | ✓ | ✗ | ReAct hit max steps; structural SQL still matched |
-| 12 | Products with most returns | ✗ | ✓ | ✓ | Generated SQL omitted `total < 0` return filter |
+#### v1.1 current (2026-05-27, with judge)
 
-**Tier pass rates (skip_judge run):**
+Run date: 2026-05-27  
+Environment: host GPU Ollama via auto-routing; models `qwen2.5-coder:14b` / `qwen3:32b`  
+Command: `docker compose exec nlp python -m eval.harness`  
+Log: `nlp/logs/eval_20260527T211111Z.json`  
+Wall clock: ~127 min logged pipeline latency (~90–120 min typical on GPU; judge calls add overhead beyond `latency_ms`)
 
-| Tier | Formula | Pass rate |
-|------|---------|-----------|
-| Structural | `sql_pass ∧ class_pass ∧ ambiguity_pass` | 10/12 |
-| Execution | `execution.success` | 11/12 |
-| Composite (`case_pass`) | structural ∧ execution | 9/12 |
+Judge ran on 11/12 cases (skipped when execution failed). Cases 4, 7, and 8 received minor fidelity nitpicks (USD vs ARS symbol, unsupported inference); all still pass composite gates. Judge scores are informational — not part of `case_pass`.
 
-Clause-level: 11/12 SQL, 11/12 class.
+#### Per-case comparison (v1 vs v1.1)
 
-Known failures: Case 1 — classifier keyword precedence (`Friday` → `time_filter`); Case 12 — missing negative-total filter in generated SQL.
+| Case | Question summary | v1 SQL | v1 Class | v1 Exec | v1 pass | v1.1 SQL | v1.1 Class | v1.1 Exec | v1.1 pass | Notes |
+|------|-----------------|:------:|:--------:|:-------:|:-------:|:--------:|:----------:|:---------:|:---------:|-------|
+| 1 | Most bought product on Fridays | ✓ | ✗ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | v1: classifier returned `time_filter` (Friday) vs `aggregation`. v1.1: aggregation override (T4) |
+| 2 | Transactions on Saturdays | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| 3 | Busiest hours on weekdays | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| 4 | Total revenue October 2024 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | v1.1 judge: USD symbol vs ARS reference |
+| 5 | Waiter most revenue | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| 6 | Week-over-week revenue trend | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| 7 | Top 5 products by revenue | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | v1.1 judge: minor percentage inflation, unsupported product inference |
+| 8 | Transactions in November | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | v1.1 judge: contextual interpretation beyond raw count |
+| 9 | Average ticket value per waiter | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| 10 | Most popular product (ambiguity) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Ambiguity resolution applied |
+| 11 | Recent sales (ambiguity) | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ | Both runs: ReAct max steps. v1.1: dataset date anchor (T2) fixes ambiguity text but execution still fails |
+| 12 | Products with most returns | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | v1: omitted `total < 0`. v1.1: returns trigger injection (T3) |
+
+**Tier pass rates:**
+
+| Tier | Formula | v1 (skip_judge) | v1.1 (with judge) |
+|------|---------|-----------------|-------------------|
+| Structural | `sql_pass ∧ class_pass ∧ ambiguity_pass` | 10/12 (83%) | 12/12 (100%) |
+| Execution | `execution_pass` | 11/12 (92%) | 11/12 (92%) |
+| Composite (`case_pass`) | structural ∧ execution | 9/12 (75%) | 11/12 (92%) |
+
+v1 clause-level: 11/12 SQL, 11/12 class.
+
+**Known failure (v1.1):** Case 11 — open-ended "recent sales" query; ReAct observer hits max steps without a successful result set. Potential follow-up: relax the 10k-row aggregation-miss heuristic for open-ended time-filter queries.
 
 ---
 
@@ -220,6 +272,8 @@ What would change for a real Nivii deployment beyond this demo:
 - **Latency on CPU-only machines** — see [CPU-Only Fallback](#cpu-only-fallback); 45–90 min per query.
 - **Dataset scope** — 60 days (Sep 21 – Nov 20, 2024); annual or year-over-year queries return partial results only.
 - **AmbiguityDetector rule coverage** — finite rule set; novel phrasings may not trigger resolution.
+- **Open-ended temporal queries** — dataset-anchored "recent" disambiguation helps, but Case 11 still fails execution (ReAct max steps).
+- **Narrative overreach** — LLM judge can flag unsupported inference or currency symbols even when composite gates pass (Cases 4, 7, 8 in v1.1).
 - **Eval harness scope** — final-pass gate, not continuous regression in CI.
 
 ---

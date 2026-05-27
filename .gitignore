@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 .env
+logs/
+nlp/logs/
+.dev/
+HANDOFF_DOSSIER/
+dev_log.yaml
