@@ -6,6 +6,17 @@
 
 ---
 
+## TL;DR
+
+- **How** — default `docker compose up` vs `docker compose run -e` fallback (no compose edits)
+- **Hardware** — ~14 GB RAM, CPU-only, Docker ~10.7 GiB limit
+- **Strategies** — smaller models via `-e`, cached Ollama volume, accepting slower CPU inference
+- **Results** — stack/UI/tests pass; default 14b/32b partial (SQL ok, synthesis OOM); full e2e with 7b/8b in ~15.7 min
+- **Confirmed** — same answers as primary PC `dev_log.yaml`; nothing changed in the cloned repo
+- **Verdict** — portability yes; performance / full-default parity no on this hardware
+
+---
+
 ## Goal
 
 Verify that Mini Nivii runs from a clean checkout on a weaker machine than the primary dev PC, and document what is portable vs. what is hardware-bound.
