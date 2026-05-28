@@ -33,7 +33,7 @@ Inferencias corren via Ollama con dos modelos task-specific:
 ## Techniques
 
 - Schema Injection:
-    A cada sql generation prompt le inyectamos el CREATE TABLE DDL con column comments, date ranges, sample values, etc. El modelo está entrenado para de manera que entiende eso mejor que una descripcion en NL. 
+    A cada sql generation prompt le inyectamos el CREATE TABLE DDL con column comments, date ranges, sample values, etc. El modelo está entrenado de manera que entiende eso mejor que una descripcion en NL. 
 
 - Few-shots: 
     Por query class inyectamos un ejemplo para que el modelo vea la forma *correcta* del query. 

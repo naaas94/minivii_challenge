@@ -30,7 +30,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | Dataset is Sep–Nov **2024**, not “today”; prime constraint dropped; ReAct retries empty window. Ground truth on anchored window would be e.g. `Tableta 70 cacao x80g`, qty 2 (lab check). |
 | **Severity** | `demo-ok` (honest failure) |
 | **Mitigation** | Accepted — shows ReAct + date anchoring limits; related to temporal grounding in [open-questions.md](open-questions.md). |
-| **Source** | adversarial run (prime + last 30 days) |
+| **Source** | Adversarial run (prime + last 30 days) |
 
 ---
 
@@ -43,7 +43,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | Wall-clock “recent” on static 2024 CSV → empty or wrong window; ReAct exhausts `max_steps=4`. v1.1 improves disambiguation text but **eval case 11** still fails execution. |
 | **Severity** | `eval-known` |
 | **Mitigation** | Documented in README eval table (Case 11). See [open-questions.md](open-questions.md) (case 11). |
-| **Source** | golden eval Case 11 |
+| **Source** | Golden eval Case 11 |
 
 **Note:** A lab log entry pasted a Friday-busiest synthesis paragraph under this run; the pipeline only calls synthesis when `execution.success and execution.data` — the **UI shows an execution error**, not that narrative. Treat pasted synthesis as log noise, not product behavior.
 
@@ -58,7 +58,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | Counterfactual not in schema; model struggles → long inference → httpx/UI path surfaces outage. |
 | **Severity** | `ops` + `demo-ok` |
 | **Mitigation** | Accepted — not a supported question class; see [runtime_performance.md](runtime_performance.md) for GPU/timeout context. |
-| **Source** | promotion stress test |
+| **Source** | Promotion stress test |
 
 ---
 
@@ -84,7 +84,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | `resolve_ollama_url()` probes API reachability, not model tags; host and container have **separate** `ollama pull` caches. |
 | **Severity** | `ops` |
 | **Mitigation** | On host: `ollama pull qwen3:32b` (and 14b). Or force `OLLAMA_URL=http://ollama:11434` on `nlp`. Documented in [runtime_performance.md](runtime_performance.md#separate-model-libraries-host-vs-container). |
-| **Source** | Final pre-submission UI test (2026-05-28) |
+| **Source** | Final pre-submission UI test (2026-05-27) |
 
 ---
 
@@ -95,7 +95,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | `what's the most sold product` | ~7 min e2e (GPU host), aggregation, 1 step, Alfajor 4566 — matches expected POS behavior |
 | `what's the bussiest day of the week` | Friday 1985 transactions; synthesis reasonable |
 
-**Source:** normal-path UI runs
+**Source:** Normal-path UI runs
 
 ---
 
