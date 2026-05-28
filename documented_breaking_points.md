@@ -17,7 +17,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | SQL model **reinterprets** off-domain wording onto schema (Alfajor / `Alf.%`); synthesizer reads the **count + column alias** and invents an aviation/meal story. Prompt is grounded on result rows, not SQL text; no OOD gate. User sees polished BI copy that does not match what was actually queried. |
 | **Severity** | `trust-risk` |
 | **Mitigation** | Accepted for demo — SQL + table visible in UI; no OOD or narrative–SQL consistency check. Not in golden eval by design. |
-| **Source** | UI stress test, 2026-05-28 (pre-submission); screenshot on file |
+| **Source** | UI stress test, 2026-05-27 (pre-submission) |
 
 ---
 
@@ -30,7 +30,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | Dataset is Sep–Nov **2024**, not “today”; prime constraint dropped; ReAct retries empty window. Ground truth on anchored window would be e.g. `Tableta 70 cacao x80g`, qty 2 (lab check). |
 | **Severity** | `demo-ok` (honest failure) |
 | **Mitigation** | Accepted — shows ReAct + date anchoring limits; related to temporal grounding in [open-questions.md](open-questions.md). |
-| **Source** | `.dev/dev_log.yaml` — adversarial run (prime + last 30 days) |
+| **Source** | adversarial run (prime + last 30 days) |
 
 ---
 
@@ -43,9 +43,9 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | Wall-clock “recent” on static 2024 CSV → empty or wrong window; ReAct exhausts `max_steps=4`. v1.1 improves disambiguation text but **eval case 11** still fails execution. |
 | **Severity** | `eval-known` |
 | **Mitigation** | Documented in README eval table (Case 11). See [open-questions.md](open-questions.md) (case 11). |
-| **Source** | `.dev/dev_log.yaml` run 5 · golden eval Case 11 |
+| **Source** | golden eval Case 11 |
 
-**Note:** `dev_log.yaml` pasted a Friday-busiest synthesis paragraph under this run; the pipeline only calls synthesis when `execution.success and execution.data` — the **UI shows an execution error**, not that narrative. Treat pasted synthesis as log noise, not product behavior.
+**Note:** A lab log entry pasted a Friday-busiest synthesis paragraph under this run; the pipeline only calls synthesis when `execution.success and execution.data` — the **UI shows an execution error**, not that narrative. Treat pasted synthesis as log noise, not product behavior.
 
 ---
 
@@ -58,7 +58,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | Counterfactual not in schema; model struggles → long inference → httpx/UI path surfaces outage. |
 | **Severity** | `ops` + `demo-ok` |
 | **Mitigation** | Accepted — not a supported question class; see [runtime_performance.md](runtime_performance.md) for GPU/timeout context. |
-| **Source** | `.dev/dev_log.yaml` run 6 (promotion) |
+| **Source** | promotion stress test |
 
 ---
 
@@ -71,7 +71,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | **Why it breaks** | Keyword classifier map iteration; answer can be right while **eval `class_pass`** disagrees (Case 1 was fixed in v1.1 via aggregation override — UI ad-hoc runs may still show `time_filter` depending on phrasing). |
 | **Severity** | `demo-ok` |
 | **Mitigation** | Eval harness enforces class gates; v1.1 override for ranking + day-of-week co-occurrence. |
-| **Source** | `.dev/dev_log.yaml` run 3 · README eval Case 1 notes |
+| **Source** | README eval Case 1 notes |
 
 ---
 
@@ -95,7 +95,7 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | `what's the most sold product` | ~7 min e2e (GPU host), aggregation, 1 step, Alfajor 4566 — matches expected POS behavior |
 | `what's the bussiest day of the week` | Friday 1985 transactions; synthesis reasonable |
 
-**Source:** `.dev/dev_log.yaml` runs 1–2
+**Source:** normal-path UI runs
 
 ---
 
@@ -108,4 +108,3 @@ Curated stress cases from manual UI probing and lab notes — **not** covered by
 | [portability_check_on_my_laptop.md](portability_check_on_my_laptop.md) | Second machine, RAM/OOM |
 | [runtime_performance.md](runtime_performance.md) | Host vs container latency and pulls |
 | [handoff_notes_in_raw_criollo.md](handoff_notes_in_raw_criollo.md) | Informal operator notes (EN/ES) |
-| `.dev/dev_log.yaml` | Chronological lab notebook (not in submission branch) |
